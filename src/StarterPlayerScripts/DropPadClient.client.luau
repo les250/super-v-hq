@@ -91,12 +91,16 @@ Remotes.RoomBuilt.OnClientEvent:Connect(function(roomId: string, tier: number)
         end
     end
 
-    -- Make the pre-placed room model visible (all parts → Transparency 0)
+    -- Make the pre-placed room model visible; structural parts become solid
     local roomModel = plot:FindFirstChild("Room_" .. roomId)
     if roomModel and roomModel:IsA("Model") then
         for _, part in ipairs(roomModel:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.Transparency = 0
+                -- Neon parts are decorative — keep passable; solid parts become collidable
+                if part.Material ~= Enum.Material.Neon then
+                    part.CanCollide = true
+                end
             end
         end
         -- If tier 1 just built, add the upgrade proximity prompt

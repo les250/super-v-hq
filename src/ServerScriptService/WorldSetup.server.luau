@@ -110,7 +110,7 @@ local function buildRoomModel(plot, roomId, padPos, wallCol, floorCol, decorFn)
         pt.Size = sz
         pt.Position = Vector3.new(ox+dx, dy, oz+dz)
         pt.Anchored = true
-        pt.CanCollide = cc ~= false
+        pt.CanCollide = false  -- invisible rooms never block players
         pt.Transparency = 1
         pt.BrickColor = BrickColor.new(col)
         pt.Material = mat or Enum.Material.SmoothPlastic
