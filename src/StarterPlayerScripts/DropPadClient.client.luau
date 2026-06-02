@@ -2,6 +2,12 @@
 local Players          = game:GetService("Players")
 local Remotes          = require(game.ReplicatedStorage.Remotes)
 
+local function titleCase(s: string): string
+    return (s:gsub("_", " "):gsub("(%a)([%a]*)", function(first, rest)
+        return first:upper() .. rest:lower()
+    end))
+end
+
 local player    = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
@@ -25,7 +31,7 @@ local plot = getMyPlot()
 -- Add ProximityPrompt to a drop pad part
 local function setupDropPad(part: Part, roomId: string)
     local prompt = Instance.new("ProximityPrompt")
-    prompt.ActionText    = "Build " .. roomId:gsub("_", " "):gsub("^%l", string.upper)
+    prompt.ActionText    = "Build " .. titleCase(roomId)
     prompt.ObjectText    = "Drop Pad"
     prompt.HoldDuration  = 0.5
     prompt.MaxActivationDistance = 8
@@ -49,8 +55,8 @@ local function setupUpgradePad(roomModel: Model, roomId: string)
     upgradePart.CFrame = roomModel:GetPivot() * CFrame.new(0, -roomModel:GetExtentsSize().Y / 2, 0)
 
     local prompt = Instance.new("ProximityPrompt")
-    prompt.ActionText   = "Upgrade"
-    prompt.ObjectText   = roomId:gsub("_", " "):gsub("^%l", string.upper)
+    prompt.ActionText   = "Upgrade " .. titleCase(roomId)
+    prompt.ObjectText   = "Upgrade Pad"
     prompt.HoldDuration = 0.5
     prompt.MaxActivationDistance = 8
     prompt.Parent = upgradePart
