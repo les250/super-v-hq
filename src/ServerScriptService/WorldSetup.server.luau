@@ -56,11 +56,33 @@ end
 -- ── Lighting ───────────────────────────────────────────────────────────────
 
 local function buildLighting()
-    Lighting.ClockTime=0; Lighting.Brightness=1.5
-    Lighting.Ambient=Color3.fromRGB(40,0,60); Lighting.OutdoorAmbient=Color3.fromRGB(20,0,40)
-    Lighting.FogEnd=1000; Lighting.FogColor=Color3.fromRGB(15,0,30)
-    local a=Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere",Lighting)
-    a.Density=0.3; a.Color=Color3.fromRGB(80,0,120); a.Haze=2
+    Lighting.ClockTime      = 20        -- late evening, some sky glow
+    Lighting.Brightness     = 3         -- bright enough to see everything
+    Lighting.Ambient        = Color3.fromRGB(120, 80, 180)   -- visible purple ambient
+    Lighting.OutdoorAmbient = Color3.fromRGB(80,  50, 140)   -- outdoor fill light
+    Lighting.FogEnd         = 1400
+    Lighting.FogColor       = Color3.fromRGB(20, 0, 40)
+
+    -- Remove old effects first
+    for _, e in ipairs(Lighting:GetChildren()) do e:Destroy() end
+
+    local atmo = Instance.new("Atmosphere", Lighting)
+    atmo.Density = 0.2
+    atmo.Color   = Color3.fromRGB(100, 0, 160)
+    atmo.Haze    = 1.5
+    atmo.Glare   = 0.3
+
+    -- Bloom makes neon elements pop
+    local bloom = Instance.new("BloomEffect", Lighting)
+    bloom.Intensity  = 0.8
+    bloom.Size       = 24
+    bloom.Threshold  = 0.9
+
+    -- Slight colour correction to keep villain purple tone
+    local cc = Instance.new("ColorCorrectionEffect", Lighting)
+    cc.Saturation = 0.2
+    cc.Contrast   = 0.1
+    cc.TintColor  = Color3.fromRGB(220, 200, 255)
 end
 
 -- ── Terrain ────────────────────────────────────────────────────────────────
@@ -127,6 +149,26 @@ local function buildLabFloor(plot, cx, cz)
         -- Neon floor edge lines
         vp(bm,"FEdge"..dIdx,  Vector3.new(18,0.2,0.5),dx,0.3,cz-D/2+3,DEPT_ACCENT[dIdx],Enum.Material.Neon,true)
         vp(bm,"BEdge"..dIdx,  Vector3.new(18,0.2,0.5),dx,0.3,cz+D/2-3,DEPT_ACCENT[dIdx],Enum.Material.Neon,true)
+    end
+
+    -- Interior lights per department (always on so you can see inside)
+    local DEPT_LIGHT_COLORS = {
+        Color3.fromRGB(80,255,120),   -- Chemistry: green
+        Color3.fromRGB(80,160,255),   -- Electronics: blue
+        Color3.fromRGB(80,220,220),   -- Biology: cyan
+        Color3.fromRGB(180,80,255),   -- Physics: violet
+        Color3.fromRGB(255,80,80),    -- Weapons: red
+    }
+    for dIdx=1,5 do
+        local dx=cx+DEPT_X[dIdx]
+        local col=DEPT_LIGHT_COLORS[dIdx]
+        for _, zOff in ipairs({-D/4, D/4}) do
+            local lp=Instance.new("Part"); lp.Size=Vector3.new(0.5,0.5,0.5)
+            lp.Position=Vector3.new(dx,H-2,cz+zOff)
+            lp.Anchored=true; lp.CanCollide=false; lp.Transparency=1; lp.Parent=bm
+            local pl=Instance.new("PointLight",lp)
+            pl.Brightness=3; pl.Range=42; pl.Color=col
+        end
     end
 
     -- 50 station pads + hidden equipment
