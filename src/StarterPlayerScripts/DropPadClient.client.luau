@@ -1,6 +1,7 @@
 -- src/StarterPlayerScripts/DropPadClient.client.luau
 local Players          = game:GetService("Players")
 local Remotes          = require(game.ReplicatedStorage.Remotes)
+local RoomData         = require(game.ReplicatedStorage.RoomData)
 -- Small yield so server replication settles before we poll for the plot
 task.wait()
 
@@ -32,9 +33,11 @@ local plot = getMyPlot()
 
 -- Add ProximityPrompt to a drop pad part
 local function setupDropPad(part: Part, roomId: string)
+    local room = RoomData.getRoom(roomId)
+    local displayName = room and room.name or titleCase(roomId)
     local prompt = Instance.new("ProximityPrompt")
-    prompt.ActionText    = "Build " .. titleCase(roomId)
-    prompt.ObjectText    = "Drop Pad"
+    prompt.ActionText    = "Build: " .. displayName
+    prompt.ObjectText    = room and ("💰 " .. room.tiers[1].cost) or "Drop Pad"
     prompt.HoldDuration  = 0.5
     prompt.MaxActivationDistance = 8
     prompt.Parent = part

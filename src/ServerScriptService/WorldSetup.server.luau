@@ -95,69 +95,73 @@ local function buildRoom(plot, model, plotCF, deptIdx, lx, lz, W, D, doorDir, st
     lp.Anchored=true; lp.CanCollide=false; lp.Transparency=1; lp.Parent=model
     local pl=Instance.new("PointLight",lp); pl.Brightness=4; pl.Range=55; pl.Color=DEPT_LIGHT_COL[deptIdx]
 
-    -- Wall helper
-    local function solidWall(name,sz,dx,dz)
-        vp(model,name,sz,cf(dx,H/2,dz),"Really black")
+    -- Wall helpers (dy is explicit so door top goes above the gap, not in it)
+    local function solidWall(name,sz,dx,dy,dz)
+        vp(model,name,sz,cf(dx,dy,dz),"Really black")
     end
 
+    -- Door: gap is 10 studs tall (floor→Y=10), thin solid strip above (Y=10→H)
     local function doorWall(isXAxis, offset)
-        -- isXAxis: wall runs along X (N or S wall). offset: ±(half depth or half width)
+        local doorH  = 10
+        local topH   = H - doorH          -- 4 studs of wall above the door
+        local topY   = doorH + topH/2     -- centre of top strip
         if isXAxis then
-            local side=(W-DOOR_W)/2
-            solidWall("Wd_L",Vector3.new(side,H,T),       -(W/2-side/2), offset)
-            solidWall("Wd_R",Vector3.new(side,H,T),        (W/2-side/2), offset)
-            solidWall("Wd_T",Vector3.new(DOOR_W,H-10,T),  0,             offset)
-            local g=vp(model,"WdGlass",Vector3.new(DOOR_W,7,T),cf(0,7,offset),acol,Enum.Material.SmoothPlastic)
-            g.Transparency=0.55
+            local side = (W-DOOR_W)/2
+            solidWall("Wd_L",Vector3.new(side,H,T),   -(W/2-side/2), H/2,  offset)
+            solidWall("Wd_R",Vector3.new(side,H,T),    (W/2-side/2), H/2,  offset)
+            solidWall("Wd_T",Vector3.new(DOOR_W,topH,T), 0,           topY, offset)
+            -- Neon accent above door arch
+            local g=vp(model,"WdAccent",Vector3.new(DOOR_W,0.4,T),cf(0,doorH,offset),acol,Enum.Material.Neon,true)
         else
-            local side=(D-DOOR_W)/2
-            solidWall("Wd_L",Vector3.new(T,H,side),       offset, -(D/2-side/2))
-            solidWall("Wd_R",Vector3.new(T,H,side),       offset,  (D/2-side/2))
-            solidWall("Wd_T",Vector3.new(T,H-10,DOOR_W),  offset, 0)
-            local g=vp(model,"WdGlass",Vector3.new(T,7,DOOR_W),cf(offset,7,0),acol,Enum.Material.SmoothPlastic)
-            g.Transparency=0.55
+            local side = (D-DOOR_W)/2
+            solidWall("Wd_L",Vector3.new(T,H,side),    offset, H/2,  -(D/2-side/2))
+            solidWall("Wd_R",Vector3.new(T,H,side),    offset, H/2,   (D/2-side/2))
+            solidWall("Wd_T",Vector3.new(T,topH,DOOR_W),offset, topY, 0)
+            local g=vp(model,"WdAccent",Vector3.new(T,0.4,DOOR_W),cf(offset,doorH,0),acol,Enum.Material.Neon,true)
         end
     end
 
     local function windowWall(isXAxis, offset)
+        local topH  = H - WIN_BASE - WIN_H
+        local topY  = WIN_BASE + WIN_H + topH/2
         if isXAxis then
             local side=(W-WIN_W)/2
-            solidWall("Ww_L",Vector3.new(side,H,T),       -(W/2-side/2), offset)
-            solidWall("Ww_R",Vector3.new(side,H,T),        (W/2-side/2), offset)
-            solidWall("Ww_B",Vector3.new(WIN_W,WIN_BASE,T), 0, offset)
+            solidWall("Ww_L",Vector3.new(side,H,T),           -(W/2-side/2), H/2,           offset)
+            solidWall("Ww_R",Vector3.new(side,H,T),            (W/2-side/2), H/2,           offset)
+            solidWall("Ww_B",Vector3.new(WIN_W,WIN_BASE,T),    0,             WIN_BASE/2,    offset)
             local g=vp(model,"WwGlass",Vector3.new(WIN_W,WIN_H,T),cf(0,WIN_BASE+WIN_H/2,offset),acol,Enum.Material.SmoothPlastic)
-            g.Transparency=0.5
-            solidWall("Ww_T",Vector3.new(WIN_W,H-WIN_BASE-WIN_H,T), 0, offset)
+            g.Transparency=0.45
+            solidWall("Ww_T",Vector3.new(WIN_W,topH,T),        0,             topY,          offset)
         else
             local side=(D-WIN_W)/2
-            solidWall("Ww_L",Vector3.new(T,H,side),       offset, -(D/2-side/2))
-            solidWall("Ww_R",Vector3.new(T,H,side),       offset,  (D/2-side/2))
-            solidWall("Ww_B",Vector3.new(T,WIN_BASE,WIN_W),offset, 0)
+            solidWall("Ww_L",Vector3.new(T,H,side),            offset, H/2,           -(D/2-side/2))
+            solidWall("Ww_R",Vector3.new(T,H,side),            offset, H/2,            (D/2-side/2))
+            solidWall("Ww_B",Vector3.new(T,WIN_BASE,WIN_W),    offset, WIN_BASE/2,     0)
             local g=vp(model,"WwGlass",Vector3.new(T,WIN_H,WIN_W),cf(offset,WIN_BASE+WIN_H/2,0),acol,Enum.Material.SmoothPlastic)
-            g.Transparency=0.5
-            solidWall("Ww_T",Vector3.new(T,H-WIN_BASE-WIN_H,WIN_W), offset, 0)
+            g.Transparency=0.45
+            solidWall("Ww_T",Vector3.new(T,topH,WIN_W),        offset, topY,           0)
         end
     end
 
     -- N=deeper(-Z), S=entrance(+Z), E=right(+X), W=left(-X)
     if doorDir=="S" then
-        doorWall(true,    D/2-T/2)     -- S wall: door
-        solidWall("WN",Vector3.new(W,H,T), 0, -D/2+T/2)  -- N: solid
-        windowWall(false, -W/2+T/2)   -- W: window
-        windowWall(false,  W/2-T/2)   -- E: window
+        doorWall(true,    D/2-T/2)
+        solidWall("WN",Vector3.new(W,H,T), 0, H/2, -D/2+T/2)
+        windowWall(false, -W/2+T/2)
+        windowWall(false,  W/2-T/2)
     elseif doorDir=="N" then
-        doorWall(true,  -D/2+T/2)
-        solidWall("WS",Vector3.new(W,H,T), 0, D/2-T/2)
+        doorWall(true, -D/2+T/2)
+        solidWall("WS",Vector3.new(W,H,T), 0, H/2, D/2-T/2)
         windowWall(false,-W/2+T/2)
         windowWall(false, W/2-T/2)
     elseif doorDir=="E" then
         doorWall(false,   W/2-T/2)
-        solidWall("WW",Vector3.new(T,H,D),-W/2+T/2, 0)
+        solidWall("WW",Vector3.new(T,H,D),-W/2+T/2, H/2, 0)
         windowWall(true, -D/2+T/2)
         windowWall(true,  D/2-T/2)
     elseif doorDir=="W" then
         doorWall(false,  -W/2+T/2)
-        solidWall("WE",Vector3.new(T,H,D), W/2-T/2, 0)
+        solidWall("WE",Vector3.new(T,H,D), W/2-T/2, H/2, 0)
         windowWall(true, -D/2+T/2)
         windowWall(true,  D/2-T/2)
     end
