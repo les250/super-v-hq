@@ -248,6 +248,29 @@ local function buildPlots()
         local oid = Instance.new("IntValue")
         oid.Name = "OwnerId"; oid.Value = 0; oid.Parent = plot
 
+        -- Per-plot spawn point (player.RespawnLocation is set here on claim)
+        local plotSpawn = Instance.new("SpawnLocation")
+        plotSpawn.Name = "PlotSpawn"
+        plotSpawn.Size = Vector3.new(6, 1, 6)
+        plotSpawn.Position = Vector3.new(cx, 0.5, cz)
+        plotSpawn.Anchored = true
+        plotSpawn.Neutral = false
+        plotSpawn.AllowTeamChangeOnTouch = false
+        plotSpawn.Transparency = 0.85
+        plotSpawn.BrickColor = BrickColor.new("Bright red")
+        plotSpawn.Material = Enum.Material.Neon
+        plotSpawn.Parent = plot
+
+        -- Anchor for the "Move Base Here" sign and prompt
+        local moveAnchor = Instance.new("Part")
+        moveAnchor.Name = "MoveSignAnchor"
+        moveAnchor.Size = Vector3.new(1, 1, 1)
+        moveAnchor.Transparency = 1
+        moveAnchor.CanCollide = false
+        moveAnchor.Anchored = true
+        moveAnchor.Position = Vector3.new(cx, 8, cz)
+        moveAnchor.Parent = plot
+
         -- Point light over plot
         local lpart = Instance.new("Part")
         lpart.Name = "PlotLight"

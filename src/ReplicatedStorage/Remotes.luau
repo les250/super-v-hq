@@ -35,5 +35,12 @@ Remotes.PrepareRaid       = get("RemoteEvent",    "PrepareRaid")       -- (targe
 -- Client → Server with return
 Remotes.GetPlayerData     = get("RemoteFunction", "GetPlayerData")     -- () → playerData table
 Remotes.GetAllPlotInfo    = get("RemoteFunction", "GetAllPlotInfo")    -- () → list of {userId, name, vaultAmount}
+Remotes.GetFreePlots      = get("RemoteFunction", "GetFreePlots")      -- () → list of {name, index, position}
+
+-- Base selection / movement
+Remotes.ClaimBase         = get("RemoteEvent",    "ClaimBase")         -- (plotName: string)
+Remotes.MoveBase          = get("RemoteEvent",    "MoveBase")          -- (plotName: string)
+Remotes.BaseAssigned      = get("RemoteEvent",    "BaseAssigned")      -- (plotName: string) server→client
+Remotes.ResetPlot         = get("RemoteEvent",    "ResetPlot")         -- () server→client: hide all rooms
 
 return Remotes

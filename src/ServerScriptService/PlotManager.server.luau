@@ -2,7 +2,17 @@
 local Players   = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
--- { [userId: number]: plotFolder }
+local Remotes
+task.spawn(function()
+    task.wait(0.2)
+    Remotes = require(game.ReplicatedStorage.Remotes)
+end)
+
+local function getDS()
+    while not _G.DataStore do task.wait(0.1) end
+    return _G.DataStore
+end
+
 local playerPlots: {[number]: Folder} = {}
 
 local function getPlots(): {Folder}
@@ -16,34 +26,43 @@ local function getPlots(): {Folder}
     return plots
 end
 
-local function assignPlot(player: Player): Folder?
+local function getFreePlots(): {Folder}
+    local free = {}
     for _, plot in ipairs(getPlots()) do
-        local occupied = plot:FindFirstChild("IsOccupied")
-        if occupied and not occupied.Value then
-            occupied.Value = true
-            local ownerId = plot:FindFirstChild("OwnerId")
-            if ownerId then
-                ownerId.Value = player.UserId
-            end
-            playerPlots[player.UserId] = plot
-            return plot
+        local occ = plot:FindFirstChild("IsOccupied")
+        if occ and not occ.Value then
+            table.insert(free, plot)
         end
     end
-    return nil
+    return free
+end
+
+local function setPlotOccupied(plot: Folder, player: Player)
+    local occ = plot:FindFirstChild("IsOccupied")
+    if occ then occ.Value = true end
+    local oid = plot:FindFirstChild("OwnerId")
+    if oid then oid.Value = player.UserId end
+    playerPlots[player.UserId] = plot
+    local spawn = plot:FindFirstChild("PlotSpawn")
+    if spawn then player.RespawnLocation = spawn end
+end
+
+local function clearPlot(plot: Folder)
+    local occ = plot:FindFirstChild("IsOccupied")
+    if occ then occ.Value = false end
+    local oid = plot:FindFirstChild("OwnerId")
+    if oid then oid.Value = 0 end
 end
 
 local function freePlot(player: Player)
     local plot = playerPlots[player.UserId]
     if plot then
-        local occupied = plot:FindFirstChild("IsOccupied")
-        if occupied then occupied.Value = false end
-        local ownerId = plot:FindFirstChild("OwnerId")
-        if ownerId then ownerId.Value = 0 end
+        clearPlot(plot)
         playerPlots[player.UserId] = nil
     end
+    player.RespawnLocation = nil
 end
 
--- Public API
 local PlotManager = {}
 
 function PlotManager.getPlot(player: Player): Folder?
@@ -54,11 +73,22 @@ function PlotManager.getPlotByUserId(userId: number): Folder?
     return playerPlots[userId]
 end
 
-Players.PlayerAdded:Connect(function(player)
-    local plot = assignPlot(player)
-    if not plot then
-        warn("No free plot for", player.Name)
+local function tryAutoAssign(player: Player)
+    task.wait(1) -- wait for WorldSetup to finish building plots
+    if playerPlots[player.UserId] then return end
+    local free = getFreePlots()
+    if #free == 1 then
+        setPlotOccupied(free[1], player)
+        while not Remotes do task.wait(0.1) end
+        Remotes.BaseAssigned:FireClient(player, free[1].Name)
+    elseif #free == 0 then
+        warn("No free plots for", player.Name)
     end
+    -- if #free > 1: client selection screen handles it via ClaimBase
+end
+
+Players.PlayerAdded:Connect(function(player)
+    task.spawn(tryAutoAssign, player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
@@ -66,7 +96,51 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 for _, player in ipairs(Players:GetPlayers()) do
-    assignPlot(player)
+    task.spawn(tryAutoAssign, player)
 end
+
+-- Remote handlers
+task.spawn(function()
+    while not Remotes do task.wait(0.1) end
+
+    Remotes.GetFreePlots.OnServerInvoke = function(_player)
+        local result = {}
+        for _, plot in ipairs(getFreePlots()) do
+            local pad = plot:FindFirstChild("DropPad_lab")
+            table.insert(result, {
+                name     = plot.Name,
+                index    = tonumber(plot.Name:match("%d+")) or 0,
+                position = pad and pad.Position or Vector3.new(0, 0, 0),
+            })
+        end
+        return result
+    end
+
+    Remotes.ClaimBase.OnServerEvent:Connect(function(player, plotName)
+        if playerPlots[player.UserId] then return end
+        local plot = Workspace:FindFirstChild(plotName)
+        if not plot then return end
+        local occ = plot:FindFirstChild("IsOccupied")
+        if occ and occ.Value then return end
+        setPlotOccupied(plot, player)
+        Remotes.BaseAssigned:FireClient(player, plot.Name)
+    end)
+
+    Remotes.MoveBase.OnServerEvent:Connect(function(player, plotName)
+        local newPlot = Workspace:FindFirstChild(plotName)
+        if not newPlot then return end
+        local occ = newPlot:FindFirstChild("IsOccupied")
+        if occ and occ.Value then return end
+        -- Reset room data, keep currency
+        local ds = getDS()
+        local data = ds.get(player)
+        if data then data.rooms = {} end
+        -- Hide rooms on old plot for this client
+        Remotes.ResetPlot:FireClient(player)
+        freePlot(player)
+        setPlotOccupied(newPlot, player)
+        Remotes.BaseAssigned:FireClient(player, newPlot.Name)
+    end)
+end)
 
 _G.PlotManager = PlotManager

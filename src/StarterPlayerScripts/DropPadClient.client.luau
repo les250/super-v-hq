@@ -78,6 +78,30 @@ for _, obj in ipairs(plot:GetDescendants()) do
     end
 end
 
+-- When player moves base, hide all rooms and re-enable all drop pads
+Remotes.ResetPlot.OnClientEvent:Connect(function()
+    if not plot then return end
+    for _, obj in ipairs(plot:GetDescendants()) do
+        if obj:IsA("Part") then
+            if obj.Name:match("^DropPad_") then
+                obj.Transparency = 0
+                local prompt = obj:FindFirstChildOfClass("ProximityPrompt")
+                if prompt then prompt.Enabled = true end
+            elseif obj.Name == "UpgradePad" then
+                obj:Destroy()
+            end
+        end
+        if obj:IsA("Model") and obj.Name:match("^Room_") then
+            for _, part in ipairs(obj:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.Transparency = 1
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+end)
+
 -- When a room is built, hide its drop pad, show the pre-placed room model, add upgrade pad
 -- Room models are pre-placed in Studio as Model "Room_<roomId>" with all parts set
 -- Transparency=1 so they are invisible until bought.
