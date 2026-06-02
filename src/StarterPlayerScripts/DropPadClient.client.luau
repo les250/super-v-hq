@@ -115,14 +115,13 @@ Remotes.RoomBuilt.OnClientEvent:Connect(function(roomId: string, tier: number)
         end
     end
 
-    -- Make the pre-placed room model visible; structural parts become solid
+    -- Make the pre-placed room model visible; restore collision from attribute
     local roomModel = plot:FindFirstChild("Room_" .. roomId)
     if roomModel and roomModel:IsA("Model") then
         for _, part in ipairs(roomModel:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.Transparency = 0
-                -- Neon parts are decorative — keep passable; solid parts become collidable
-                if part.Material ~= Enum.Material.Neon then
+                if part:GetAttribute("ShouldCollide") == true then
                     part.CanCollide = true
                 end
             end
