@@ -55,6 +55,9 @@ local function executeRaid(raider: Player, targetUserId: number)
     local targetCap = RoomData.getVaultCap(targetData.rooms, Config.BASE_VAULT_CAP)
     Remotes.UpdateCurrency:FireClient(targetPlayer, targetData.vaultAmount, targetCap)
     Remotes.RaidNotification:FireClient(targetPlayer, raider.Name, stolen)
+
+    -- Save both sides immediately so a server crash can't desync raider gain vs victim loss
+    ds.save(targetPlayer)
 end
 
 -- Handle currency product purchases and raid purchases
