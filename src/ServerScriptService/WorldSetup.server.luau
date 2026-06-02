@@ -19,7 +19,7 @@ for i = 1, 10 do STATION_Z[i] = -36 + (i-1)*8 end
 local DEPT_MAT = {
     Enum.Material.Marble,
     Enum.Material.Metal,
-    Enum.Material.Tiles,
+    Enum.Material.Concrete,
     Enum.Material.SmoothPlastic,
     Enum.Material.DiamondPlate,
 }
