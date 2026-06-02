@@ -68,15 +68,24 @@ local function setupUpgradePad(roomModel: Model, roomId: string)
     end)
 end
 
--- Wire up all drop pads found in this plot
-for _, obj in ipairs(plot:GetDescendants()) do
-    if obj:IsA("Part") then
-        local roomId = obj.Name:match("^DropPad_(.+)$")
-        if roomId then
-            setupDropPad(obj, roomId)
-        end
-    end
+-- Wire up a single part if it's a drop pad
+local wiredPads = {}
+local function tryWirePad(obj)
+    if not obj:IsA("Part") then return end
+    local roomId = obj.Name:match("^DropPad_(.+)$")
+    if not roomId then return end
+    if wiredPads[obj] then return end  -- already wired
+    wiredPads[obj] = true
+    setupDropPad(obj, roomId)
 end
+
+-- Wire any pads already replicated
+for _, obj in ipairs(plot:GetDescendants()) do
+    tryWirePad(obj)
+end
+
+-- Wire pads that arrive later (50-station lab replicates in batches)
+plot.DescendantAdded:Connect(tryWirePad)
 
 -- When player moves base, hide all rooms and re-enable all drop pads
 Remotes.ResetPlot.OnClientEvent:Connect(function()
