@@ -3,7 +3,16 @@ local DataStoreService = game:GetService("DataStoreService")
 local Players          = game:GetService("Players")
 local Config           = require(game.ReplicatedStorage.Config)
 
-local store = DataStoreService:GetDataStore("SuperVHQ_v1")
+-- In Studio without API services enabled, GetDataStore throws — fall back to memory-only
+local store = nil
+local storeAvailable = false
+local storeOk, storeErr = pcall(function()
+    store = DataStoreService:GetDataStore("SuperVHQ_v1")
+    storeAvailable = true
+end)
+if not storeOk then
+    warn("DataStore unavailable (publish the place to enable persistence): " .. tostring(storeErr))
+end
 
 -- In-memory cache: { [userId: number]: playerData }
 local cache: {[number]: any} = {}
@@ -25,24 +34,25 @@ end
 
 local function loadData(player: Player)
     local key = "Player_" .. player.UserId
-    local success, data = pcall(function()
-        return store:GetAsync(key)
-    end)
-    if success and data then
-        -- Merge with defaults so new fields appear for existing players
-        local merged = deepCopy(DEFAULT_DATA)
-        for k, v in pairs(data) do
-            merged[k] = v
+    if storeAvailable then
+        local success, data = pcall(function()
+            return store:GetAsync(key)
+        end)
+        if success and data then
+            local merged = deepCopy(DEFAULT_DATA)
+            for k, v in pairs(data) do
+                merged[k] = v
+            end
+            cache[player.UserId] = merged
+            return
         end
-        cache[player.UserId] = merged
-    else
-        cache[player.UserId] = deepCopy(DEFAULT_DATA)
     end
+    cache[player.UserId] = deepCopy(DEFAULT_DATA)
 end
 
 local function saveData(player: Player)
     local data = cache[player.UserId]
-    if not data then return end
+    if not data or not storeAvailable then return end
     local key = "Player_" .. player.UserId
     local success, err = pcall(function()
         store:SetAsync(key, data)
