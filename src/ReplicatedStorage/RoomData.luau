@@ -1,38 +1,61 @@
 -- src/ReplicatedStorage/RoomData.luau
 local RoomData = {}
 
--- Each room: id, name, unlockOrder, tiers[], optional defense fields
--- tiers[n] = { cost: number, incomePerTick: number }
-RoomData.ROOMS = {
+-- ── Lab floor: 5 departments × 10 stations = 50 total ─────────────────────
+-- All lab stations have unlockOrder=1.
+-- Upper floors (unlockOrder 2-6) are gated behind all 50 being bought.
+
+local LAB_DEPTS = {
+    { name = "chemistry",   label = "Chem Lab"    },
+    { name = "electronics", label = "Electronics" },
+    { name = "biology",     label = "Bio Lab"     },
+    { name = "physics",     label = "Physics"     },
+    { name = "weapons",     label = "Weapons R&D" },
+}
+
+local labStations = {}
+for deptIdx, dept in ipairs(LAB_DEPTS) do
+    for i = 1, 10 do
+        local g = (deptIdx - 1) * 10 + i          -- global index 1-50
+        local cost   = math.floor(60 * (g ^ 1.45))
+        local income = math.max(1, math.floor(g * 0.9))
+        table.insert(labStations, {
+            id           = "lab_" .. dept.name .. "_" .. i,
+            name         = dept.label .. " " .. i,
+            unlockOrder  = 1,
+            deptIndex    = deptIdx,
+            stationIndex = i,
+            tiers = {
+                { cost = cost,      incomePerTick = income },
+                { cost = cost * 3,  incomePerTick = math.floor(income * 2.5) },
+                { cost = cost * 8,  incomePerTick = math.floor(income * 6)   },
+            },
+        })
+    end
+end
+
+-- ── Upper floors (gated behind all 50 lab stations) ────────────────────────
+
+local upperFloors = {
     {
-        id           = "lab",
-        name         = "Lab",
-        unlockOrder  = 1,
+        id              = "armory",
+        name            = "Armory",
+        unlockOrder     = 2,
         tiers = {
-            { cost = 100,    incomePerTick = 5  },
-            { cost = 500,    incomePerTick = 12 },
-            { cost = 2000,   incomePerTick = 25 },
+            { cost = 5000,   incomePerTick = 60  },
+            { cost = 18000,  incomePerTick = 140 },
+            { cost = 55000,  incomePerTick = 290 },
         },
     },
     {
-        id           = "armory",
-        name         = "Armory",
-        unlockOrder  = 2,
+        id               = "minion_barracks",
+        name             = "Minion Barracks",
+        unlockOrder      = 3,
+        raidDefenseBonus = { 0.02, 0.04, 0.07 },
         tiers = {
-            { cost = 400,    incomePerTick = 15 },
-            { cost = 1500,   incomePerTick = 35 },
-            { cost = 5000,   incomePerTick = 70 },
-        },
-    },
-    {
-        id                = "minion_barracks",
-        name              = "Minion Barracks",
-        unlockOrder       = 3,
-        raidDefenseBonus  = { 0.02, 0.04, 0.07 }, -- reduces fraction stolen
-        tiers = {
-            { cost = 1000,   incomePerTick = 20 },
-            { cost = 4000,   incomePerTick = 45 },
-            { cost = 12000,  incomePerTick = 90 },
+            { cost = 12000,  incomePerTick = 90  },
+            { cost = 40000,  incomePerTick = 200 },
+            { cost = 120000, incomePerTick = 420 },
         },
     },
     {
@@ -40,21 +63,21 @@ RoomData.ROOMS = {
         name         = "War Room",
         unlockOrder  = 4,
         tiers = {
-            { cost = 3000,   incomePerTick = 50  },
-            { cost = 10000,  incomePerTick = 110 },
-            { cost = 30000,  incomePerTick = 220 },
+            { cost = 30000,  incomePerTick = 150 },
+            { cost = 100000, incomePerTick = 350 },
+            { cost = 300000, incomePerTick = 750 },
         },
     },
     {
         id               = "vault",
         name             = "Vault",
         unlockOrder      = 5,
-        vaultCapBonus    = { 5000, 15000, 50000 }, -- added to BASE_VAULT_CAP
-        raidDefenseBonus = { 0.01, 0.03, 0.05  },
+        vaultCapBonus    = { 20000, 80000, 250000 },
+        raidDefenseBonus = { 0.01, 0.03, 0.05 },
         tiers = {
-            { cost = 8000,   incomePerTick = 30  },
-            { cost = 25000,  incomePerTick = 65  },
-            { cost = 80000,  incomePerTick = 130 },
+            { cost = 80000,  incomePerTick = 200 },
+            { cost = 250000, incomePerTick = 480 },
+            { cost = 800000, incomePerTick = 1000 },
         },
     },
     {
@@ -62,62 +85,75 @@ RoomData.ROOMS = {
         name         = "Escape Pod Bay",
         unlockOrder  = 6,
         tiers = {
-            { cost = 20000,  incomePerTick = 80  },
-            { cost = 60000,  incomePerTick = 180 },
-            { cost = 200000, incomePerTick = 400 },
+            { cost = 200000,  incomePerTick = 400  },
+            { cost = 600000,  incomePerTick = 900  },
+            { cost = 2000000, incomePerTick = 2000 },
         },
     },
 }
 
--- Returns the room table for a given id, or nil
+-- Combine into flat ROOMS list (lab stations first, then upper floors)
+RoomData.ROOMS = {}
+for _, s in ipairs(labStations)  do table.insert(RoomData.ROOMS, s) end
+for _, r in ipairs(upperFloors)  do table.insert(RoomData.ROOMS, r) end
+
+-- ── Helpers ────────────────────────────────────────────────────────────────
+
 function RoomData.getRoom(id: string)
-    for _, room in ipairs(RoomData.ROOMS) do
-        if room.id == id then
-            return room
-        end
+    for _, r in ipairs(RoomData.ROOMS) do
+        if r.id == id then return r end
     end
     return nil
 end
 
--- Returns the vault capacity for a player given their built rooms
--- builtRooms: { [roomId: string]: tier: number } where tier is 1-3
 function RoomData.getVaultCap(builtRooms: {[string]: number}, baseCap: number): number
     local cap = baseCap
     local vault = RoomData.getRoom("vault")
     if vault then
         local tier = builtRooms["vault"]
-        if tier and tier > 0 then
-            cap += vault.vaultCapBonus[tier]
-        end
+        if tier and tier > 0 then cap += vault.vaultCapBonus[tier] end
     end
     return cap
 end
 
--- Returns the total defense reduction fraction for a player's built rooms
--- e.g. 0.07 means 7% is subtracted from RAID_STEAL_PERCENT
 function RoomData.getDefenseReduction(builtRooms: {[string]: number}): number
     local reduction = 0
-    for _, room in ipairs(RoomData.ROOMS) do
-        if room.raidDefenseBonus then
-            local tier = builtRooms[room.id]
+    for _, r in ipairs(RoomData.ROOMS) do
+        if r.raidDefenseBonus then
+            local tier = builtRooms[r.id]
             if tier and tier > 0 then
-                reduction += room.raidDefenseBonus[tier]
+                reduction += r.raidDefenseBonus[tier]
             end
         end
     end
     return reduction
 end
 
--- Returns total incomePerTick across all built rooms
 function RoomData.getTotalIncome(builtRooms: {[string]: number}): number
     local total = 0
-    for _, room in ipairs(RoomData.ROOMS) do
-        local tier = builtRooms[room.id]
+    for _, r in ipairs(RoomData.ROOMS) do
+        local tier = builtRooms[r.id]
         if tier and tier > 0 then
-            total += room.tiers[tier].incomePerTick
+            total += r.tiers[tier].incomePerTick
         end
     end
     return total
 end
+
+-- How many lab stations are fully unlocked (tier >= 1)
+function RoomData.getLabProgress(builtRooms: {[string]: number}): (number, number)
+    local bought, total = 0, 50
+    for _, r in ipairs(RoomData.ROOMS) do
+        if r.unlockOrder == 1 then
+            if builtRooms[r.id] and builtRooms[r.id] > 0 then
+                bought += 1
+            end
+        end
+    end
+    return bought, total
+end
+
+-- Lab department names for WorldSetup
+RoomData.LAB_DEPTS = LAB_DEPTS
 
 return RoomData

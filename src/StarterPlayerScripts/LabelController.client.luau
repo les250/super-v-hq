@@ -1,16 +1,14 @@
 -- src/StarterPlayerScripts/LabelController.client.luau
--- Shows cost labels only on the owning player's plot, only within 20 studs
-local Players = game:GetService("Players")
-local Remotes = require(game.ReplicatedStorage.Remotes)
+-- Shows cost labels on owned plot drop pads (proximity) + sky label + lab progress
+local Players  = game:GetService("Players")
+local Remotes  = require(game.ReplicatedStorage.Remotes)
+local RoomData = require(game.ReplicatedStorage.RoomData)
 
 local player = Players.LocalPlayer
 
-local costs = {
-    lab=100, armory=400, minion_barracks=1000,
-    war_room=3000, vault=8000, escape_pod_bay=20000
-}
-local roomNames = {
-    lab="Lab", armory="Armory", minion_barracks="Minion Barracks",
+local UPPER_FLOORS = {"armory","minion_barracks","war_room","vault","escape_pod_bay"}
+local UPPER_NAMES  = {
+    armory="Armory", minion_barracks="Minion Barracks",
     war_room="War Room", vault="Vault", escape_pod_bay="Escape Pod Bay"
 }
 
@@ -20,10 +18,8 @@ local function getMyPlot()
     while true do
         for _, obj in ipairs(workspace:GetChildren()) do
             if obj:IsA("Folder") and obj.Name:match("^Plot_%d+$") then
-                local ownerId = obj:FindFirstChild("OwnerId")
-                if ownerId and ownerId.Value == player.UserId then
-                    return obj
-                end
+                local oid = obj:FindFirstChild("OwnerId")
+                if oid and oid.Value == player.UserId then return obj end
             end
         end
         task.wait(0.5)
@@ -32,12 +28,14 @@ end
 
 local plot = getMyPlot()
 
-local function makeLabel(pad, roomId)
+-- ── Label factory ──────────────────────────────────────────────────────────
+
+local function makeLabel(pad, titleText, bodyText, maxDist, borderColor)
     local bb = Instance.new("BillboardGui")
     bb.Name = "CostLabel"
-    bb.Size = UDim2.new(0, 170, 0, 65)
-    bb.StudsOffset = Vector3.new(0, 5, 0)
-    bb.MaxDistance = 20
+    bb.Size = UDim2.new(0, 170, 0, 60)
+    bb.StudsOffset = Vector3.new(0, 4, 0)
+    bb.MaxDistance = maxDist or 15
     bb.AlwaysOnTop = false
     bb.Parent = pad
 
@@ -47,108 +45,148 @@ local function makeLabel(pad, roomId)
     bg.BackgroundTransparency = 0.2
     bg.Parent = bb
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = bg
+    Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 8)
+    local st = Instance.new("UIStroke", bg)
+    st.Color = borderColor or Color3.fromRGB(180, 0, 255); st.Thickness = 1.5
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(180, 0, 255)
-    stroke.Thickness = 2
-    stroke.Parent = bg
+    local t = Instance.new("TextLabel")
+    t.Size = UDim2.new(1, -6, 0.5, 0); t.Position = UDim2.new(0, 3, 0, 0)
+    t.BackgroundTransparency = 1
+    t.TextColor3 = Color3.fromRGB(255, 220, 50)
+    t.TextScaled = true; t.Font = Enum.Font.GothamBold
+    t.Text = titleText; t.Parent = bg
 
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -8, 0.5, 0)
-    title.Position = UDim2.new(0, 4, 0, 0)
-    title.BackgroundTransparency = 1
-    title.TextColor3 = Color3.fromRGB(255, 220, 50)
-    title.TextScaled = true
-    title.Font = Enum.Font.GothamBold
-    title.Text = roomNames[roomId]
-    title.Parent = bg
+    local b = Instance.new("TextLabel")
+    b.Size = UDim2.new(1, -6, 0.5, 0); b.Position = UDim2.new(0, 3, 0.5, 0)
+    b.BackgroundTransparency = 1
+    b.TextColor3 = Color3.fromRGB(200, 160, 255)
+    b.TextScaled = true; b.Font = Enum.Font.Gotham
+    b.Text = bodyText; b.Parent = bg
 
-    local costLabel = Instance.new("TextLabel")
-    costLabel.Size = UDim2.new(1, -8, 0.5, 0)
-    costLabel.Position = UDim2.new(0, 4, 0.5, 0)
-    costLabel.BackgroundTransparency = 1
-    costLabel.TextColor3 = Color3.fromRGB(200, 160, 255)
-    costLabel.TextScaled = true
-    costLabel.Font = Enum.Font.Gotham
-    costLabel.Text = "💰 " .. costs[roomId]
-    costLabel.Parent = bg
+    return bb
 end
 
--- Create labels on all unbuilt drop pads
-for roomId in pairs(costs) do
-    local pad = plot:FindFirstChild("DropPad_" .. roomId)
-    if pad then
-        makeLabel(pad, roomId)
+-- ── Lab station labels (50 pads) ───────────────────────────────────────────
+
+local DEPT_COLORS = {
+    Color3.fromRGB(0, 200, 80),   -- chemistry  (green)
+    Color3.fromRGB(0, 120, 255),  -- electronics (blue)
+    Color3.fromRGB(0, 210, 210),  -- biology (cyan)
+    Color3.fromRGB(160, 0, 255),  -- physics (violet)
+    Color3.fromRGB(255, 40, 40),  -- weapons (red)
+}
+
+for _, room in ipairs(RoomData.ROOMS) do
+    if room.unlockOrder == 1 then
+        local pad = plot:FindFirstChild("DropPad_" .. room.id)
+        if pad then
+            makeLabel(pad, room.name, "💰 " .. room.tiers[1].cost,
+                12, DEPT_COLORS[room.deptIndex])
+        end
     end
 end
 
--- Sky label above the player's own base
+-- ── Upper floor labels ─────────────────────────────────────────────────────
+
+for _, id in ipairs(UPPER_FLOORS) do
+    local pad = plot:FindFirstChild("DropPad_" .. id)
+    if pad then
+        local room = RoomData.getRoom(id)
+        if room then
+            makeLabel(pad, "Floor " .. (room.unlockOrder) .. " — " .. UPPER_NAMES[id],
+                "💰 " .. room.tiers[1].cost .. "  (Lab required)", 20,
+                Color3.fromRGB(255, 180, 0))
+        end
+    end
+end
+
+-- ── Sky label ──────────────────────────────────────────────────────────────
+
 local function makeSkyLabel()
     local anchor = plot:WaitForChild("BaseLabelAnchor", 10)
     if not anchor then return end
 
     local bb = Instance.new("BillboardGui")
-    bb.Name = "SkyLabel"
-    bb.Size = UDim2.new(0, 220, 0, 90)
-    bb.MaxDistance = 500
-    bb.AlwaysOnTop = false
-    bb.Parent = anchor
+    bb.Name = "SkyLabel"; bb.Size = UDim2.new(0, 220, 0, 90)
+    bb.MaxDistance = 600; bb.AlwaysOnTop = false; bb.Parent = anchor
 
     local bg = Instance.new("Frame")
     bg.Size = UDim2.new(1, 0, 1, 0)
     bg.BackgroundColor3 = Color3.fromRGB(15, 0, 25)
-    bg.BackgroundTransparency = 0.15
-    bg.Parent = bb
+    bg.BackgroundTransparency = 0.15; bg.Parent = bb
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = bg
+    Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 12)
+    local st = Instance.new("UIStroke", bg)
+    st.Color = Color3.fromRGB(180, 0, 255); st.Thickness = 2
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(180, 0, 255)
-    stroke.Thickness = 2
-    stroke.Parent = bg
+    local function lbl(txt, col, yp, sz)
+        local l = Instance.new("TextLabel")
+        l.Size = UDim2.new(1, -8, sz or 0.3, 0)
+        l.Position = UDim2.new(0, 4, yp, 0)
+        l.BackgroundTransparency = 1
+        l.TextColor3 = col; l.TextScaled = true
+        l.Font = Enum.Font.GothamBold; l.Text = txt; l.Parent = bg
+    end
 
-    local arrow = Instance.new("TextLabel")
-    arrow.Size = UDim2.new(1, 0, 0.35, 0)
-    arrow.BackgroundTransparency = 1
-    arrow.TextColor3 = Color3.fromRGB(180, 0, 255)
-    arrow.TextScaled = true
-    arrow.Font = Enum.Font.GothamBold
-    arrow.Text = "▼  YOUR BASE  ▼"
-    arrow.Parent = bg
-
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, -8, 0.4, 0)
-    nameLabel.Position = UDim2.new(0, 4, 0.35, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.TextColor3 = Color3.fromRGB(255, 220, 50)
-    nameLabel.TextScaled = true
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.Text = player.DisplayName
-    nameLabel.Parent = bg
-
-    local sub = Instance.new("TextLabel")
-    sub.Size = UDim2.new(1, 0, 0.25, 0)
-    sub.Position = UDim2.new(0, 0, 0.75, 0)
-    sub.BackgroundTransparency = 1
-    sub.TextColor3 = Color3.fromRGB(200, 160, 255)
-    sub.TextScaled = true
-    sub.Font = Enum.Font.Gotham
-    sub.Text = "@" .. player.Name
-    sub.Parent = bg
+    lbl("▼  YOUR BASE  ▼", Color3.fromRGB(180,0,255), 0, 0.28)
+    lbl(player.DisplayName,  Color3.fromRGB(255,220,50), 0.28, 0.4)
+    lbl("@"..player.Name,    Color3.fromRGB(200,160,255), 0.68, 0.28)
 end
 
 task.spawn(makeSkyLabel)
 
--- Remove cost label when room is bought
+-- ── Lab progress HUD (shows X/50 stations unlocked) ───────────────────────
+
+local progressLabel: TextLabel?
+
+local function updateLabProgress()
+    local data = Remotes.GetPlayerData:InvokeServer()
+    if not data then return end
+    local bought, total = RoomData.getLabProgress(data.rooms)
+    if progressLabel then
+        progressLabel.Text = "🔬 Lab: " .. bought .. " / " .. total
+    end
+end
+
+task.spawn(function()
+    local playerGui = player:WaitForChild("PlayerGui")
+    local hud = playerGui:WaitForChild("SuperVHQ_HUD", 10)
+    if not hud then return end
+
+    local pFrame = Instance.new("Frame")
+    pFrame.Size = UDim2.new(0, 200, 0, 36)
+    pFrame.Position = UDim2.new(0, 16, 0, 72)
+    pFrame.BackgroundColor3 = Color3.fromRGB(15, 0, 25)
+    pFrame.BackgroundTransparency = 0.3; pFrame.Parent = hud
+
+    Instance.new("UICorner", pFrame).CornerRadius = UDim.new(0, 8)
+
+    progressLabel = Instance.new("TextLabel")
+    progressLabel.Size = UDim2.new(1, -8, 1, 0)
+    progressLabel.Position = UDim2.new(0, 4, 0, 0)
+    progressLabel.BackgroundTransparency = 1
+    progressLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    progressLabel.TextScaled = true; progressLabel.Font = Enum.Font.Gotham
+    progressLabel.Text = "🔬 Lab: 0 / 50"
+    progressLabel.TextXAlignment = Enum.TextXAlignment.Left
+    progressLabel.Parent = pFrame
+
+    updateLabProgress()
+end)
+
+-- ── Remove label when bought; refresh progress ────────────────────────────
+
 Remotes.RoomBuilt.OnClientEvent:Connect(function(roomId)
     local pad = plot:FindFirstChild("DropPad_" .. roomId)
     if pad then
         local label = pad:FindFirstChild("CostLabel")
         if label then label:Destroy() end
     end
+    updateLabProgress()
+end)
+
+-- ── Reset on base move ────────────────────────────────────────────────────
+
+Remotes.ResetPlot.OnClientEvent:Connect(function()
+    if progressLabel then progressLabel.Text = "🔬 Lab: 0 / 50" end
 end)

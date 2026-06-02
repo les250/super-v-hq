@@ -1,230 +1,237 @@
 -- src/ServerScriptService/WorldSetup.server.luau
 -- Builds the entire world on server start. Safe to re-run (clears and rebuilds).
 local Lighting = game:GetService("Lighting")
+local RoomData  = require(game.ReplicatedStorage.RoomData)
 
-local ROOMS = {"lab","armory","minion_barracks","war_room","vault","escape_pod_bay"}
-local NUM_PLOTS = 6
-local RADIUS = 220
+local NUM_PLOTS    = 6
+local RADIUS       = 220
+local FLOOR_H      = 12   -- studs per floor
+local LAB_W        = 90   -- lab building width
+local LAB_D        = 44   -- lab building depth
+local UPPER_W      = 24   -- upper floor width/depth
+local UPPER_D      = 24
 
--- ── Terrain ────────────────────────────────────────────────────────────────
+-- Dept pad grid inside lab
+local DEPT_OFFSETS_X = {-36, -18, 0, 18, 36}  -- 5 dept columns
+local STATION_OFFSETS_Z = {}
+for i = 1, 10 do
+    STATION_OFFSETS_Z[i] = -19 + (i-1) * 4.2
+end
 
-local function buildTerrain()
-    for _, name in ipairs({"VillainFloor","CentrePad","GlowRing"}) do
-        local old = workspace:FindFirstChild(name)
-        if old then old:Destroy() end
-    end
-    for _, obj in pairs(workspace:GetChildren()) do
-        if obj.Name == "PathSegment" or obj.Name == "PathGlow" or obj.Name == "PlotLight" then
-            obj:Destroy()
-        end
-    end
+local DEPT_COLORS = {
+    "Bright green", "Bright blue", "Cyan", "Bright violet", "Bright red"
+}
 
-    local floor = Instance.new("Part")
-    floor.Name = "VillainFloor"
-    floor.Size = Vector3.new(700, 1, 700)
-    floor.Position = Vector3.new(0, -0.5, 0)
-    floor.Anchored = true
-    floor.BrickColor = BrickColor.new("Really black")
-    floor.Material = Enum.Material.SmoothPlastic
-    floor.Parent = workspace
+local UPPER_FLOORS = {
+    {id="armory",          name="Armory",         floor=2},
+    {id="minion_barracks", name="Minion Barracks", floor=3},
+    {id="war_room",        name="War Room",        floor=4},
+    {id="vault",           name="Vault",           floor=5},
+    {id="escape_pod_bay",  name="Escape Pod Bay",  floor=6},
+}
 
-    local centre = Instance.new("Part")
-    centre.Name = "CentrePad"
-    centre.Size = Vector3.new(40, 0.5, 40)
-    centre.Position = Vector3.new(0, 0.2, 0)
-    centre.Anchored = true
-    centre.Shape = Enum.PartType.Cylinder
-    centre.BrickColor = BrickColor.new("Dark grey")
-    centre.Material = Enum.Material.SmoothPlastic
-    centre.Parent = workspace
+-- ── Part helper ────────────────────────────────────────────────────────────
 
-    local ring = Instance.new("Part")
-    ring.Name = "GlowRing"
-    ring.Size = Vector3.new(3, 0.3, 460)
-    ring.Position = Vector3.new(0, 0.3, 0)
-    ring.Anchored = true
-    ring.Shape = Enum.PartType.Cylinder
-    ring.BrickColor = BrickColor.new("Bright red")
-    ring.Material = Enum.Material.Neon
-    ring.Parent = workspace
-
-    for i = 1, NUM_PLOTS do
-        local angle = (i-1) * (2*math.pi/NUM_PLOTS)
-        local cx = math.cos(angle) * RADIUS/2
-        local cz = math.sin(angle) * RADIUS/2
-
-        local path = Instance.new("Part")
-        path.Name = "PathSegment"
-        path.Size = Vector3.new(4, 0.3, RADIUS)
-        path.CFrame = CFrame.new(cx, 0.2, cz) * CFrame.Angles(0, -angle, 0)
-        path.Anchored = true
-        path.BrickColor = BrickColor.new("Dark grey")
-        path.Material = Enum.Material.SmoothPlastic
-        path.Parent = workspace
-
-        local glow = Instance.new("Part")
-        glow.Name = "PathGlow"
-        glow.Size = Vector3.new(0.3, 0.3, RADIUS)
-        glow.CFrame = CFrame.new(cx, 0.35, cz) * CFrame.Angles(0, -angle, 0) * CFrame.new(2.2, 0, 0)
-        glow.Anchored = true
-        glow.BrickColor = BrickColor.new("Bright red")
-        glow.Material = Enum.Material.Neon
-        glow.Parent = workspace
-    end
+local function makePart(parent, name, sz, px, py, pz, col, mat, canCollide, transparent)
+    local pt = Instance.new("Part")
+    pt.Name = name
+    pt.Size = sz
+    pt.Position = Vector3.new(px, py, pz)
+    pt.Anchored = true
+    pt.CanCollide = canCollide ~= false
+    pt.Transparency = transparent ~= false and 1 or 0
+    pt.BrickColor = BrickColor.new(col)
+    pt.Material = mat or Enum.Material.SmoothPlastic
+    pt.Parent = parent
+    return pt
 end
 
 -- ── Lighting ───────────────────────────────────────────────────────────────
 
 local function buildLighting()
-    Lighting.ClockTime = 0
-    Lighting.Brightness = 1.5
-    Lighting.Ambient = Color3.fromRGB(40, 0, 60)
-    Lighting.OutdoorAmbient = Color3.fromRGB(20, 0, 40)
-    Lighting.FogEnd = 900
-    Lighting.FogColor = Color3.fromRGB(15, 0, 30)
-
+    Lighting.ClockTime       = 0
+    Lighting.Brightness      = 1.5
+    Lighting.Ambient         = Color3.fromRGB(40, 0, 60)
+    Lighting.OutdoorAmbient  = Color3.fromRGB(20, 0, 40)
+    Lighting.FogEnd          = 900
+    Lighting.FogColor        = Color3.fromRGB(15, 0, 30)
     local atmo = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere", Lighting)
-    atmo.Density = 0.3
-    atmo.Offset = 0.1
-    atmo.Color = Color3.fromRGB(80, 0, 120)
-    atmo.Glare = 0.2
-    atmo.Haze = 2
+    atmo.Density = 0.3; atmo.Color = Color3.fromRGB(80, 0, 120); atmo.Haze = 2
 end
 
--- ── Room models ────────────────────────────────────────────────────────────
+-- ── Terrain ────────────────────────────────────────────────────────────────
 
-local W, H, D = 22, 12, 22
-
-local function buildRoomModel(plot, roomId, padPos, wallCol, floorCol, decorFn)
-    local old = plot:FindFirstChild("Room_" .. roomId)
-    if old then old:Destroy() end
-
-    local m = Instance.new("Model")
-    m.Name = "Room_" .. roomId
-    m.Parent = plot
-
-    local ox, oz = padPos.X, padPos.Z
-
-    local function p(sz, dx, dy, dz, col, mat, cc)
-        local pt = Instance.new("Part")
-        pt.Size = sz
-        pt.Position = Vector3.new(ox+dx, dy, oz+dz)
-        pt.Anchored = true
-        pt.CanCollide = false  -- invisible rooms never block players
-        pt.Transparency = 1
-        pt.BrickColor = BrickColor.new(col)
-        pt.Material = mat or Enum.Material.SmoothPlastic
-        pt.Parent = m
+local function buildTerrain()
+    for _, n in ipairs({"VillainFloor","CentrePad","GlowRing"}) do
+        local o = workspace:FindFirstChild(n); if o then o:Destroy() end
+    end
+    for _, o in pairs(workspace:GetChildren()) do
+        if o.Name == "PathSegment" or o.Name == "PathGlow" then o:Destroy() end
     end
 
-    p(Vector3.new(W,1,D),   0,   .5,  0,  floorCol)
-    p(Vector3.new(W,1,D),   0,  H-.5, 0,  wallCol, nil, false)
-    p(Vector3.new(W,H,1),   0,  H/2, -D/2+.5, wallCol)
-    p(Vector3.new(1,H,D),  -W/2+.5, H/2, 0, wallCol)
-    p(Vector3.new(1,H,D),   W/2-.5, H/2, 0, wallCol)
-    p(Vector3.new(8,H,1),  -7,  H/2, D/2-.5, wallCol)
-    p(Vector3.new(8,H,1),   7,  H/2, D/2-.5, wallCol)
-    p(Vector3.new(6,4,1),   0, H-2,  D/2-.5, wallCol)
+    local floor = Instance.new("Part"); floor.Name="VillainFloor"
+    floor.Size=Vector3.new(900,1,900); floor.Position=Vector3.new(0,-0.5,0)
+    floor.Anchored=true; floor.BrickColor=BrickColor.new("Really black")
+    floor.Material=Enum.Material.SmoothPlastic; floor.Parent=workspace
 
-    decorFn(p)
-end
+    local centre=Instance.new("Part"); centre.Name="CentrePad"
+    centre.Size=Vector3.new(40,0.5,40); centre.Position=Vector3.new(0,0.2,0)
+    centre.Anchored=true; centre.Shape=Enum.PartType.Cylinder
+    centre.BrickColor=BrickColor.new("Dark grey"); centre.Parent=workspace
 
-local function labDecor(p)
-    p(Vector3.new(2.5,7,2.5), -5, 4.5, -7, "Bright green", Enum.Material.Neon, false)
-    p(Vector3.new(2.5,7,2.5),  5, 4.5, -7, "Bright green", Enum.Material.Neon, false)
-    p(Vector3.new(8,.5,4), -3, 3.5, 2, "Light grey")
-    p(Vector3.new(.4,3,.4), -5, 2, 1, "Dark grey")
-    p(Vector3.new(.4,3,.4), -1, 2, 1, "Dark grey")
-    p(Vector3.new(.4,3,.4), -5, 2, 3, "Dark grey")
-    p(Vector3.new(.4,3,.4), -1, 2, 3, "Dark grey")
-    p(Vector3.new(10,5,.3),  2, 7.5, -10.4, "Black", nil, false)
-    p(Vector3.new(9,4,.2),   2, 7.5, -10.3, "Bright blue", Enum.Material.Neon, false)
-    p(Vector3.new(20,.2,.2), 0, 1.2, -10.4, "Bright green", Enum.Material.Neon, false)
-end
+    local ring=Instance.new("Part"); ring.Name="GlowRing"
+    ring.Size=Vector3.new(3,0.3,500); ring.Position=Vector3.new(0,0.3,0)
+    ring.Anchored=true; ring.Shape=Enum.PartType.Cylinder
+    ring.BrickColor=BrickColor.new("Bright red"); ring.Material=Enum.Material.Neon
+    ring.Parent=workspace
 
-local function armoryDecor(p)
-    for _, z in ipairs({-7,-2,3,8}) do
-        p(Vector3.new(.4,6,.4), -10.3, 4, z,    "Dark grey")
-        p(Vector3.new(.4,6,.4), -10.3, 4, z+1.5,"Dark grey")
-        p(Vector3.new(1,.3,1.5),-10,   8, z+.75, "Dark grey", nil, false)
-    end
-    p(Vector3.new(4,3,4), 6, 2.5, -4, "Olive")
-    p(Vector3.new(4,3,4), 6, 2.5,  2, "Olive")
-    p(Vector3.new(4,3,4), 6, 5.5, -1, "Olive")
-    p(Vector3.new(20,.2,.2), 0, 11.8, -10.4, "Bright red", Enum.Material.Neon, false)
-    p(Vector3.new(20,.2,.2), 0, 11.8,  10.4, "Bright red", Enum.Material.Neon, false)
-    p(Vector3.new(.2,12,.2), -10.4, 6, 0, "Bright red", Enum.Material.Neon, false)
-    p(Vector3.new(.2,12,.2),  10.4, 6, 0, "Bright red", Enum.Material.Neon, false)
-end
-
-local function barracksDecor(p)
-    for _, bz in ipairs({-7, 0, 7}) do
-        p(Vector3.new(6,.5,3),   -6, 2,   bz,   "Reddish brown")
-        p(Vector3.new(5.5,.3,2.5),-6, 2.4, bz,   "Bright orange", nil, false)
-        p(Vector3.new(6,.5,3),   -6, 5,   bz,   "Reddish brown")
-        p(Vector3.new(5.5,.3,2.5),-6, 5.4, bz,   "Bright orange", nil, false)
-        p(Vector3.new(.3,3,.3),  -3.5,3.5, bz+1.2,"Dark grey")
-    end
-    for _, lx in ipairs({2,4,6,8}) do
-        p(Vector3.new(1.8,5,1.3), lx, 3.5, -10, "Sand blue")
-        p(Vector3.new(.1,4.5,.1), lx, 3.5, -9.3, "Black", nil, false)
+    for i=1,NUM_PLOTS do
+        local a=(i-1)*(2*math.pi/NUM_PLOTS)
+        local cx=math.cos(a)*RADIUS/2; local cz=math.sin(a)*RADIUS/2
+        local path=Instance.new("Part"); path.Name="PathSegment"
+        path.Size=Vector3.new(6,0.3,RADIUS)
+        path.CFrame=CFrame.new(cx,0.2,cz)*CFrame.Angles(0,-a,0)
+        path.Anchored=true; path.BrickColor=BrickColor.new("Dark grey")
+        path.Material=Enum.Material.SmoothPlastic; path.Parent=workspace
     end
 end
 
-local function warRoomDecor(p)
-    p(Vector3.new(12,1,8),    0, 4,    0, "Dark grey")
-    p(Vector3.new(11.5,.3,7.5),0, 4.65, 0, "Bright blue", Enum.Material.Neon, false)
-    for _, pos in ipairs({{-5,-3},{-5,3},{5,-3},{5,3}}) do
-        p(Vector3.new(.8,4,.8), pos[1], 2, pos[2], "Really black")
-    end
-    p(Vector3.new(14,6,.3),  0, 7.5, -10.4, "Black", nil, false)
-    p(Vector3.new(13,5,.2),  0, 7.5, -10.3, "Bright red", Enum.Material.Neon, false)
-    p(Vector3.new(.3,9,6), -10.4, 5.5, 0, "Bright blue", Enum.Material.Neon, false)
-    p(Vector3.new(.3,9,6),  10.4, 5.5, 0, "Bright blue", Enum.Material.Neon, false)
-    p(Vector3.new(20,.2,.2), 0, 1.2, -10.4, "Bright blue", Enum.Material.Neon, false)
-end
+-- ── Lab floor building ─────────────────────────────────────────────────────
 
-local function vaultDecor(p)
-    p(Vector3.new(10,10,1.5), 0, 6, -10,   "Dark grey")
-    p(Vector3.new(9,9,.5),    0, 6, -9.1,  "Medium stone grey")
-    p(Vector3.new(7,7,.3),    0, 6, -8.8,  "Dark grey", nil, false)
-    p(Vector3.new(5,5,.3),    0, 6, -8.6,  "Dark grey", nil, false)
-    p(Vector3.new(.5,3,.5),   3, 6, -8.5,  "Gold", nil, false)
-    for row = 0, 2 do
-        for col = -2, 2 do
-            p(Vector3.new(1.5,.8,2.5), 5+col*.4, 1.5+row*.85, 4+row*.2, "Bright yellow")
+local function buildLabFloor(plot, cx, cz)
+    local m = Instance.new("Model"); m.Name = "Room_lab_building"; m.Parent = plot
+    local W, D, H = LAB_W, LAB_D, FLOOR_H
+    local T = 1
+
+    local function pp(nm, sz, dx, dy, dz, col, mat, cc)
+        return makePart(m, nm, sz, cx+dx, dy, cz+dz, col, mat, cc, true)
+    end
+
+    -- Structure (starts invisible)
+    pp("Floor",     Vector3.new(W,T,D),     0, T/2,       0,  "Dark grey")
+    pp("Ceiling",   Vector3.new(W,T,D),     0, H-T/2,     0,  "Really black", nil, false)
+    pp("BackWall",  Vector3.new(W,H,T),     0, H/2, -D/2+T/2, "Really black")
+    pp("LeftWall",  Vector3.new(T,H,D), -W/2+T/2, H/2, 0,     "Really black")
+    pp("RightWall", Vector3.new(T,H,D),  W/2-T/2, H/2, 0,     "Really black")
+    -- Front wall with wide entrance (30 wide)
+    local side = (W-30)/2
+    pp("FrontL",    Vector3.new(side,H,T), -(W/2-side/2), H/2, D/2-T/2, "Really black")
+    pp("FrontR",    Vector3.new(side,H,T),  (W/2-side/2), H/2, D/2-T/2, "Really black")
+    pp("FrontTop",  Vector3.new(30,4,T),    0, H-2,        D/2-T/2,     "Really black")
+
+    -- Dept divider walls (light separators)
+    for dIdx = 1, 4 do
+        local dx = DEPT_OFFSETS_X[dIdx] + 9  -- between depts
+        pp("Divider"..dIdx, Vector3.new(T, H-2, D-4), dx, (H-2)/2, 0, "Dark grey", nil, false)
+    end
+
+    -- Dept ceiling strips (neon color per dept)
+    for dIdx, col in ipairs(DEPT_COLORS) do
+        local dx = DEPT_OFFSETS_X[dIdx]
+        pp("Strip"..dIdx, Vector3.new(14, 0.3, D-2), dx, H-1.5, 0, col, Enum.Material.Neon, false)
+    end
+
+    -- Lab station pads (50 total, with colored markers)
+    for dIdx, dept in ipairs(RoomData.LAB_DEPTS) do
+        for i = 1, 10 do
+            local stId = "lab_" .. dept.name .. "_" .. i
+            local dx = DEPT_OFFSETS_X[dIdx]
+            local dz = STATION_OFFSETS_Z[i]
+
+            -- Drop pad
+            local pad = Instance.new("Part")
+            pad.Name       = "DropPad_" .. stId
+            pad.Size       = Vector3.new(4, 0.4, 3.5)
+            pad.Position   = Vector3.new(cx+dx, 0.45, cz+dz)
+            pad.Anchored   = true
+            pad.BrickColor = BrickColor.new("Dark grey")
+            pad.Material   = Enum.Material.SmoothPlastic
+            pad.Parent     = plot
+
+            -- Station model (small equipment pillar, invisible until bought)
+            local sm = Instance.new("Model")
+            sm.Name = "Room_" .. stId
+            sm.Parent = plot
+
+            makePart(sm, "Base",  Vector3.new(3.5,0.5,3),   cx+dx, 0.75, cz+dz, "Dark grey", nil, true, true)
+            makePart(sm, "Pillar",Vector3.new(1,5,1),        cx+dx, 3.5,  cz+dz, DEPT_COLORS[dIdx], nil, false, true)
+            makePart(sm, "Glow",  Vector3.new(2,1,2),        cx+dx, 6.2,  cz+dz, DEPT_COLORS[dIdx], Enum.Material.Neon, false, true)
         end
     end
-    p(Vector3.new(20,.2,.2), 0, 1.5, -10.4, "Bright yellow", Enum.Material.Neon, false)
-    p(Vector3.new(20,.2,.2), 0, 1.5,  10.4, "Bright yellow", Enum.Material.Neon, false)
-    p(Vector3.new(.2,12,.2), -10.4, 6, 0,  "Bright yellow", Enum.Material.Neon, false)
-    p(Vector3.new(.2,12,.2),  10.4, 6, 0,  "Bright yellow", Enum.Material.Neon, false)
 end
 
-local function escapePodDecor(p)
-    p(Vector3.new(6,1,6),   0,  1,  -1, "Dark grey")
-    p(Vector3.new(5,8,5),   0,  6,  -1, "White")
-    p(Vector3.new(4,3,4),   0, 10.5,-1, "Light grey")
-    p(Vector3.new(2,2,2),   0, 13,  -1, "White", nil, false)
-    for _, pos in ipairs({{2,2},{-2,2},{2,-4},{-2,-4}}) do
-        p(Vector3.new(1.5,2.5,1.5), pos[1], .8,  pos[2], "Dark grey")
-        p(Vector3.new(1,1,1),       pos[1], .2,  pos[2], "Bright orange", Enum.Material.Neon, false)
-    end
-    for _, pos in ipairs({{-4,-5},{4,-5},{-4,3},{4,3}}) do
-        p(Vector3.new(.5,10,.5), pos[1], 6, pos[2], "Dark grey")
-    end
-    p(Vector3.new(6,.2,6),   0, 11.8, -1,    "Cyan", Enum.Material.Neon, false)
-    p(Vector3.new(20,.2,.2), 0,  1.2, -10.4, "Cyan", Enum.Material.Neon, false)
-end
+-- ── Upper floor buildings ──────────────────────────────────────────────────
 
-local ROOM_DEFS = {
-    lab              = {w="White",          f="Light grey",      decor=labDecor},
-    armory           = {w="Dark grey",       f="Dark stone grey", decor=armoryDecor},
-    minion_barracks  = {w="Bright orange",   f="Reddish brown",   decor=barracksDecor},
-    war_room         = {w="Really black",    f="Dark grey",       decor=warRoomDecor},
-    vault            = {w="Bright yellow",   f="Gold",            decor=vaultDecor},
-    escape_pod_bay   = {w="White",           f="Mid gray",        decor=escapePodDecor},
+local UPPER_WALL_COLORS = {
+    "Dark grey",       -- Armory
+    "Bright orange",   -- Minion Barracks
+    "Really black",    -- War Room
+    "Bright yellow",   -- Vault
+    "White",           -- Escape Pod Bay
 }
+local UPPER_FLOOR_COLORS = {
+    "Dark stone grey", "Reddish brown", "Dark grey", "Gold", "Mid gray"
+}
+
+local function buildUpperFloor(plot, cx, cz, floorData, floorIdx)
+    local yBase = FLOOR_H * floorData.floor  -- stacked above lab
+    local W, D, H = UPPER_W, UPPER_D, FLOOR_H
+    local T = 1
+    local wc = UPPER_WALL_COLORS[floorIdx]
+    local fc = UPPER_FLOOR_COLORS[floorIdx]
+
+    local m = Instance.new("Model")
+    m.Name = "Room_" .. floorData.id
+    m.Parent = plot
+
+    local function pp(nm, sz, dx, dy, dz, col, mat, cc)
+        return makePart(m, nm, sz, cx+dx, yBase+dy, cz+dz, col, mat, cc, true)
+    end
+
+    pp("Floor",    Vector3.new(W,T,D),   0, T/2,     0,     fc)
+    pp("Ceiling",  Vector3.new(W,T,D),   0, H-T/2,   0,     wc, nil, false)
+    pp("BackWall", Vector3.new(W,H,T),   0, H/2, -D/2+T/2,  wc)
+    pp("LeftWall", Vector3.new(T,H,D), -W/2+T/2, H/2, 0,    wc)
+    pp("RightWall",Vector3.new(T,H,D),  W/2-T/2, H/2, 0,    wc)
+    -- Front wall with door
+    local side = (W-6)/2
+    pp("FrontL",  Vector3.new(side,H,T), -(W/2-side/2), H/2, D/2-T/2, wc)
+    pp("FrontR",  Vector3.new(side,H,T),  (W/2-side/2), H/2, D/2-T/2, wc)
+    pp("FrontTop",Vector3.new(6,4,T),     0, H-2, D/2-T/2,             wc)
+
+    -- Drop pad for this floor (placed at bottom of staircase = front of building at ground)
+    -- Elevated platform outside the building, accessible via exterior staircase
+    local padY = yBase + 0.25
+    local pad = Instance.new("Part")
+    pad.Name     = "DropPad_" .. floorData.id
+    pad.Size     = Vector3.new(6, 0.5, 6)
+    pad.Position = Vector3.new(cx, padY, cz + D/2 + 4)
+    pad.Anchored = true
+    pad.BrickColor = BrickColor.new("Bright green")
+    pad.Material = Enum.Material.Neon
+    pad.Parent = plot
+
+    -- Staircase up to this floor (visual only, invisible until bought)
+    local stairM = Instance.new("Model"); stairM.Name = "Stair_"..floorData.id; stairM.Parent = plot
+    local steps = math.ceil(yBase / 2)
+    for s = 1, steps do
+        makePart(stairM, "Step"..s,
+            Vector3.new(4, 0.5, 1.5),
+            cx, s*2 - 0.25, cz + D/2 + 4 - s*1.2,
+            "Dark grey", nil, true, true)
+    end
+end
+
+-- ── Staircase glow pillar ──────────────────────────────────────────────────
+
+local function buildCorePillar(plot, cx, cz)
+    local m = Instance.new("Model"); m.Name = "CorePillar"; m.Parent = plot
+    -- Central glowing tower rising through all floors
+    makePart(m, "Pillar", Vector3.new(3, FLOOR_H*6, 3), cx, FLOOR_H*3, cz,
+        "Really black", nil, true, true)
+    makePart(m, "Glow", Vector3.new(1, FLOOR_H*6+2, 1), cx, FLOOR_H*3, cz,
+        "Bright violet", Enum.Material.Neon, false, true)
+end
 
 -- ── Plots ──────────────────────────────────────────────────────────────────
 
@@ -233,75 +240,52 @@ local function buildPlots()
         local old = workspace:FindFirstChild("Plot_" .. i)
         if old then old:Destroy() end
 
-        local angle = (i-1) * (2*math.pi/NUM_PLOTS)
-        local cx = math.cos(angle) * RADIUS
-        local cz = math.sin(angle) * RADIUS
-        local perp = angle + math.pi/2
+        local a = (i-1) * (2*math.pi/NUM_PLOTS)
+        local cx = math.cos(a) * RADIUS
+        local cz = math.sin(a) * RADIUS
 
         local plot = Instance.new("Folder")
-        plot.Name = "Plot_" .. i
-        plot.Parent = workspace
+        plot.Name = "Plot_" .. i; plot.Parent = workspace
 
         local occ = Instance.new("BoolValue")
-        occ.Name = "IsOccupied"; occ.Value = false; occ.Parent = plot
-
+        occ.Name="IsOccupied"; occ.Value=false; occ.Parent=plot
         local oid = Instance.new("IntValue")
-        oid.Name = "OwnerId"; oid.Value = 0; oid.Parent = plot
+        oid.Name="OwnerId"; oid.Value=0; oid.Parent=plot
 
-        -- Per-plot spawn point (player.RespawnLocation is set here on claim)
-        local plotSpawn = Instance.new("SpawnLocation")
-        plotSpawn.Name = "PlotSpawn"
-        plotSpawn.Size = Vector3.new(6, 1, 6)
-        plotSpawn.Position = Vector3.new(cx, 0.5, cz)
-        plotSpawn.Anchored = true
-        plotSpawn.Neutral = false
-        plotSpawn.AllowTeamChangeOnTouch = false
-        plotSpawn.Transparency = 0.85
-        plotSpawn.BrickColor = BrickColor.new("Bright red")
-        plotSpawn.Material = Enum.Material.Neon
-        plotSpawn.Parent = plot
+        -- Per-plot spawn
+        local sp = Instance.new("SpawnLocation"); sp.Name="PlotSpawn"
+        sp.Size=Vector3.new(6,1,6); sp.Position=Vector3.new(cx,0.5,cz)
+        sp.Anchored=true; sp.Neutral=false; sp.AllowTeamChangeOnTouch=false
+        sp.Transparency=0.85; sp.BrickColor=BrickColor.new("Bright red")
+        sp.Material=Enum.Material.Neon; sp.Parent=plot
 
-        -- Anchor for the "Move Base Here" sign and prompt
-        local moveAnchor = Instance.new("Part")
-        moveAnchor.Name = "MoveSignAnchor"
-        moveAnchor.Size = Vector3.new(1, 1, 1)
-        moveAnchor.Transparency = 1
-        moveAnchor.CanCollide = false
-        moveAnchor.Anchored = true
-        moveAnchor.Position = Vector3.new(cx, 8, cz)
-        moveAnchor.Parent = plot
+        -- Move sign anchor (above plot)
+        local ma = Instance.new("Part"); ma.Name="MoveSignAnchor"
+        ma.Size=Vector3.new(1,1,1); ma.Transparency=1; ma.CanCollide=false
+        ma.Anchored=true; ma.Position=Vector3.new(cx,8+FLOOR_H*6,cz); ma.Parent=plot
 
-        -- Point light over plot
-        local lpart = Instance.new("Part")
-        lpart.Name = "PlotLight"
-        lpart.Size = Vector3.new(1,1,1)
-        lpart.Transparency = 1
-        lpart.CanCollide = false
-        lpart.Anchored = true
-        lpart.Position = Vector3.new(cx, 12, cz)
-        lpart.Parent = plot
-        local pl = Instance.new("PointLight", lpart)
-        pl.Brightness = 3
-        pl.Range = 60
-        pl.Color = Color3.fromRGB(180, 0, 255)
+        -- Point light
+        local lp = Instance.new("Part"); lp.Name="PlotLight"
+        lp.Size=Vector3.new(1,1,1); lp.Transparency=1; lp.CanCollide=false
+        lp.Anchored=true; lp.Position=Vector3.new(cx,FLOOR_H*6+20,cz); lp.Parent=plot
+        local pl = Instance.new("PointLight",lp); pl.Brightness=4; pl.Range=80
+        pl.Color=Color3.fromRGB(180,0,255)
 
-        for idx, roomId in ipairs(ROOMS) do
-            local offset = (idx - 3.5) * 18
-            local px = cx + math.cos(perp) * offset
-            local pz = cz + math.sin(perp) * offset
+        -- Lab floor (ground floor, fills full plot width)
+        buildLabFloor(plot, cx, cz)
 
-            local pad = Instance.new("Part")
-            pad.Name = "DropPad_" .. roomId
-            pad.Size = Vector3.new(6, 0.5, 6)
-            pad.Anchored = true
-            pad.BrickColor = BrickColor.new("Bright green")
-            pad.Material = Enum.Material.Neon
-            pad.CFrame = CFrame.new(px, 0.25, pz)
-            pad.Parent = plot
-
-            local def = ROOM_DEFS[roomId]
-            buildRoomModel(plot, roomId, pad.Position, def.w, def.f, def.decor)
+        -- Upper floors (stacked)
+        for floorIdx, floorData in ipairs(UPPER_FLOORS) do
+            buildUpperFloor(plot, cx, cz, floorData, floorIdx)
         end
+
+        -- Core glow pillar (rises through all floors)
+        buildCorePillar(plot, cx, cz)
+
+        -- Base label anchor (high above)
+        local bla = Instance.new("Part"); bla.Name="BaseLabelAnchor"
+        bla.Size=Vector3.new(1,1,1); bla.Transparency=1; bla.CanCollide=false
+        bla.Anchored=true; bla.Position=Vector3.new(cx, FLOOR_H*7+10, cz); bla.Parent=plot
     end
 end
 
@@ -310,40 +294,10 @@ end
 local function buildSpawn()
     local old = workspace:FindFirstChild("VillainSpawn")
     if old then old:Destroy() end
-    local sp = Instance.new("SpawnLocation")
-    sp.Name = "VillainSpawn"
-    sp.Size = Vector3.new(6, 1, 6)
-    sp.Anchored = true
-    sp.CFrame = CFrame.new(0, 0.5, 0)
-    sp.BrickColor = BrickColor.new("Bright red")
-    sp.Material = Enum.Material.Neon
-    sp.Parent = workspace
-end
-
--- ── Base labels (shown in sky above each plot, visible to owner only) ───────
--- These are created server-side as BillboardGui on a Part so all clients can
--- see them, but LabelController.client.luau handles the owner-only visibility.
--- We just place an anchor Part; the label text is set by the client.
-
-local function buildBaseLabelAnchors()
-    for i = 1, NUM_PLOTS do
-        local plot = workspace:FindFirstChild("Plot_" .. i)
-        if not plot then continue end
-        local old = plot:FindFirstChild("BaseLabelAnchor")
-        if old then old:Destroy() end
-        local anchor = Instance.new("Part")
-        anchor.Name = "BaseLabelAnchor"
-        anchor.Size = Vector3.new(1, 1, 1)
-        anchor.Transparency = 1
-        anchor.CanCollide = false
-        anchor.Anchored = true
-        -- Position high above the centre of the plot
-        local pad = plot:FindFirstChild("DropPad_lab")
-        local cx = pad and pad.Position.X or 0
-        local cz = pad and pad.Position.Z or 0
-        anchor.Position = Vector3.new(cx, 40, cz)
-        anchor.Parent = plot
-    end
+    local sp = Instance.new("SpawnLocation"); sp.Name="VillainSpawn"
+    sp.Size=Vector3.new(6,1,6); sp.CFrame=CFrame.new(0,0.5,0)
+    sp.Anchored=true; sp.BrickColor=BrickColor.new("Bright red")
+    sp.Material=Enum.Material.Neon; sp.Parent=workspace
 end
 
 -- ── Run ────────────────────────────────────────────────────────────────────
@@ -351,6 +305,5 @@ end
 buildLighting()
 buildTerrain()
 buildPlots()
-buildBaseLabelAnchors()
 buildSpawn()
-print("[WorldSetup] World built successfully")
+print("[WorldSetup] Multi-floor HQ world built")
