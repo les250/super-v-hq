@@ -10,12 +10,15 @@ local function getDS(): any
     return _G.DataStore
 end
 
+local TICKS_PER_MIN = 60 / Config.INCOME_TICK_INTERVAL  -- 12 ticks/min at 5s interval
+
 local function pushCurrencyUpdate(player: Player)
     local ds   = getDS()
     local data = ds.get(player)
     if not data then return end
-    local cap = RoomData.getVaultCap(data.rooms, Config.BASE_VAULT_CAP)
-    Remotes.UpdateCurrency:FireClient(player, data.vaultAmount, cap)
+    local cap       = RoomData.getVaultCap(data.rooms, Config.BASE_VAULT_CAP)
+    local incPerMin = math.floor(RoomData.getTotalIncome(data.rooms) * TICKS_PER_MIN)
+    Remotes.UpdateCurrency:FireClient(player, data.vaultAmount, cap, incPerMin)
 end
 
 -- Passive income tick

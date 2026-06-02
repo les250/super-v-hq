@@ -135,46 +135,9 @@ end
 
 task.spawn(makeSkyLabel)
 
--- ── Lab progress HUD (shows X/50 stations unlocked) ───────────────────────
+-- Lab progress moved to ObjectivesController
 
-local progressLabel: TextLabel?
-
-local function updateLabProgress()
-    local data = Remotes.GetPlayerData:InvokeServer()
-    if not data then return end
-    local bought, total = RoomData.getLabProgress(data.rooms)
-    if progressLabel then
-        progressLabel.Text = "🔬 Lab: " .. bought .. " / " .. total
-    end
-end
-
-task.spawn(function()
-    local playerGui = player:WaitForChild("PlayerGui")
-    local hud = playerGui:WaitForChild("SuperVHQ_HUD", 10)
-    if not hud then return end
-
-    local pFrame = Instance.new("Frame")
-    pFrame.Size = UDim2.new(0, 200, 0, 36)
-    pFrame.Position = UDim2.new(0, 16, 0, 72)
-    pFrame.BackgroundColor3 = Color3.fromRGB(15, 0, 25)
-    pFrame.BackgroundTransparency = 0.3; pFrame.Parent = hud
-
-    Instance.new("UICorner", pFrame).CornerRadius = UDim.new(0, 8)
-
-    progressLabel = Instance.new("TextLabel")
-    progressLabel.Size = UDim2.new(1, -8, 1, 0)
-    progressLabel.Position = UDim2.new(0, 4, 0, 0)
-    progressLabel.BackgroundTransparency = 1
-    progressLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-    progressLabel.TextScaled = true; progressLabel.Font = Enum.Font.Gotham
-    progressLabel.Text = "🔬 Lab: 0 / 50"
-    progressLabel.TextXAlignment = Enum.TextXAlignment.Left
-    progressLabel.Parent = pFrame
-
-    updateLabProgress()
-end)
-
--- ── Remove label when bought; refresh progress ────────────────────────────
+-- ── Remove label when bought ────────────────────────────────────────────
 
 Remotes.RoomBuilt.OnClientEvent:Connect(function(roomId)
     local pad = plot:FindFirstChild("DropPad_" .. roomId)
@@ -182,11 +145,4 @@ Remotes.RoomBuilt.OnClientEvent:Connect(function(roomId)
         local label = pad:FindFirstChild("CostLabel")
         if label then label:Destroy() end
     end
-    updateLabProgress()
-end)
-
--- ── Reset on base move ────────────────────────────────────────────────────
-
-Remotes.ResetPlot.OnClientEvent:Connect(function()
-    if progressLabel then progressLabel.Text = "🔬 Lab: 0 / 50" end
 end)

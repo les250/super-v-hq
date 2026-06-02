@@ -14,7 +14,7 @@ gui.Parent          = playerGui
 
 -- Currency bar (top-left)
 local currencyFrame = Instance.new("Frame")
-currencyFrame.Size              = UDim2.new(0, 260, 0, 50)
+currencyFrame.Size              = UDim2.new(0, 260, 0, 72)
 currencyFrame.Position          = UDim2.new(0, 16, 0, 16)
 currencyFrame.BackgroundColor3  = Color3.fromRGB(20, 20, 30)
 currencyFrame.BackgroundTransparency = 0.3
@@ -25,7 +25,7 @@ corner1.CornerRadius = UDim.new(0, 8)
 corner1.Parent = currencyFrame
 
 local currencyLabel = Instance.new("TextLabel")
-currencyLabel.Size              = UDim2.new(1, -12, 1, 0)
+currencyLabel.Size              = UDim2.new(1, -12, 0, 42)
 currencyLabel.Position          = UDim2.new(0, 12, 0, 0)
 currencyLabel.BackgroundTransparency = 1
 currencyLabel.TextColor3        = Color3.fromRGB(255, 220, 50)
@@ -34,6 +34,18 @@ currencyLabel.Font              = Enum.Font.GothamBold
 currencyLabel.Text              = "💰 100 / 1000"
 currencyLabel.TextXAlignment    = Enum.TextXAlignment.Left
 currencyLabel.Parent            = currencyFrame
+
+-- Income per minute (below currency)
+local incomeLabel = Instance.new("TextLabel")
+incomeLabel.Size              = UDim2.new(1, -12, 0, 26)
+incomeLabel.Position          = UDim2.new(0, 12, 0, 44)
+incomeLabel.BackgroundTransparency = 1
+incomeLabel.TextColor3        = Color3.fromRGB(100, 255, 140)
+incomeLabel.TextScaled        = true
+incomeLabel.Font              = Enum.Font.Gotham
+incomeLabel.Text              = "📈 +0 /min"
+incomeLabel.TextXAlignment    = Enum.TextXAlignment.Left
+incomeLabel.Parent            = currencyFrame
 
 -- Raid notification toast (centre-top, hidden by default)
 local toastFrame = Instance.new("Frame")
@@ -72,9 +84,12 @@ local function showToast(message: string)
     end)
 end
 
--- Update currency label
-Remotes.UpdateCurrency.OnClientEvent:Connect(function(amount: number, cap: number)
+-- Update currency + income labels
+Remotes.UpdateCurrency.OnClientEvent:Connect(function(amount: number, cap: number, incPerMin: number)
     currencyLabel.Text = string.format("💰 %d / %d", math.floor(amount), cap)
+    if incomeLabel then
+        incomeLabel.Text = string.format("📈 +%d /min", incPerMin or 0)
+    end
 end)
 
 -- Raid notification

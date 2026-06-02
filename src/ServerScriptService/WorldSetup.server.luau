@@ -60,7 +60,7 @@ local function buildTerrain()
     for _,o in pairs(workspace:GetChildren()) do if o.Name=="PathSegment" then o:Destroy() end end
     vp(workspace,"VillainFloor",Vector3.new(1400,2,1400),CFrame.new(0,-1,0),"Really black")
     vp(workspace,"CentrePad",  Vector3.new(60,1,60),     CFrame.new(0,0,0), "Dark grey")
-    vp(workspace,"GlowRing",   Vector3.new(100,0.2,100), CFrame.new(0,0.1,0),"Bright red",Enum.Material.Neon,true)
+    -- (GlowRing removed)
     for i=1,NUM_PLOTS do
         local a=(i-1)*(2*math.pi/NUM_PLOTS)
         local path=Instance.new("Part"); path.Name="PathSegment"
