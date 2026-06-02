@@ -85,7 +85,66 @@ for roomId in pairs(costs) do
     end
 end
 
--- Remove label when room is bought
+-- Sky label above the player's own base
+local function makeSkyLabel()
+    local anchor = plot:WaitForChild("BaseLabelAnchor", 10)
+    if not anchor then return end
+
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "SkyLabel"
+    bb.Size = UDim2.new(0, 220, 0, 90)
+    bb.MaxDistance = 500
+    bb.AlwaysOnTop = false
+    bb.Parent = anchor
+
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(1, 0, 1, 0)
+    bg.BackgroundColor3 = Color3.fromRGB(15, 0, 25)
+    bg.BackgroundTransparency = 0.15
+    bg.Parent = bb
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = bg
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(180, 0, 255)
+    stroke.Thickness = 2
+    stroke.Parent = bg
+
+    local arrow = Instance.new("TextLabel")
+    arrow.Size = UDim2.new(1, 0, 0.35, 0)
+    arrow.BackgroundTransparency = 1
+    arrow.TextColor3 = Color3.fromRGB(180, 0, 255)
+    arrow.TextScaled = true
+    arrow.Font = Enum.Font.GothamBold
+    arrow.Text = "▼  YOUR BASE  ▼"
+    arrow.Parent = bg
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, -8, 0.4, 0)
+    nameLabel.Position = UDim2.new(0, 4, 0.35, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextColor3 = Color3.fromRGB(255, 220, 50)
+    nameLabel.TextScaled = true
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.Text = player.DisplayName
+    nameLabel.Parent = bg
+
+    local sub = Instance.new("TextLabel")
+    sub.Size = UDim2.new(1, 0, 0.25, 0)
+    sub.Position = UDim2.new(0, 0, 0.75, 0)
+    sub.BackgroundTransparency = 1
+    sub.TextColor3 = Color3.fromRGB(200, 160, 255)
+    sub.TextScaled = true
+    sub.Font = Enum.Font.Gotham
+    sub.Text = "@" .. player.Name
+    sub.Parent = bg
+end
+
+task.spawn(makeSkyLabel)
+
+-- Remove cost label when room is bought
 Remotes.RoomBuilt.OnClientEvent:Connect(function(roomId)
     local pad = plot:FindFirstChild("DropPad_" .. roomId)
     if pad then

@@ -297,10 +297,37 @@ local function buildSpawn()
     sp.Parent = workspace
 end
 
+-- ── Base labels (shown in sky above each plot, visible to owner only) ───────
+-- These are created server-side as BillboardGui on a Part so all clients can
+-- see them, but LabelController.client.luau handles the owner-only visibility.
+-- We just place an anchor Part; the label text is set by the client.
+
+local function buildBaseLabelAnchors()
+    for i = 1, NUM_PLOTS do
+        local plot = workspace:FindFirstChild("Plot_" .. i)
+        if not plot then continue end
+        local old = plot:FindFirstChild("BaseLabelAnchor")
+        if old then old:Destroy() end
+        local anchor = Instance.new("Part")
+        anchor.Name = "BaseLabelAnchor"
+        anchor.Size = Vector3.new(1, 1, 1)
+        anchor.Transparency = 1
+        anchor.CanCollide = false
+        anchor.Anchored = true
+        -- Position high above the centre of the plot
+        local pad = plot:FindFirstChild("DropPad_lab")
+        local cx = pad and pad.Position.X or 0
+        local cz = pad and pad.Position.Z or 0
+        anchor.Position = Vector3.new(cx, 40, cz)
+        anchor.Parent = plot
+    end
+end
+
 -- ── Run ────────────────────────────────────────────────────────────────────
 
 buildLighting()
 buildTerrain()
 buildPlots()
+buildBaseLabelAnchors()
 buildSpawn()
 print("[WorldSetup] World built successfully")
