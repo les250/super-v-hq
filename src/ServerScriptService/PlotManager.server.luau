@@ -44,7 +44,17 @@ local function setPlotOccupied(plot: Folder, player: Player)
     if oid then oid.Value = player.UserId end
     playerPlots[player.UserId] = plot
     local spawn = plot:FindFirstChild("PlotSpawn")
-    if spawn then player.RespawnLocation = spawn end
+    if spawn then
+        player.RespawnLocation = spawn
+        -- Teleport character to spawn immediately (don't wait for death)
+        local char = player.Character
+        if char then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.CFrame = spawn.CFrame * CFrame.new(0, 3, 0)
+            end
+        end
+    end
 end
 
 local function clearPlot(plot: Folder)
