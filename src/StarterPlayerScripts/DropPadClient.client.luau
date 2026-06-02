@@ -1,9 +1,8 @@
 -- src/StarterPlayerScripts/DropPadClient.client.luau
-print("[DropPadClient] script started")
 local Players          = game:GetService("Players")
-print("[DropPadClient] requiring Remotes...")
 local Remotes          = require(game.ReplicatedStorage.Remotes)
-print("[DropPadClient] Remotes loaded")
+-- Small yield so server replication settles before we poll for the plot
+task.wait()
 
 local function titleCase(s: string): string
     return (s:gsub("_", " "):gsub("(%a)([%a]*)", function(first, rest)
@@ -29,9 +28,7 @@ local function getMyPlot(): Folder
     end
 end
 
-print("[DropPadClient] waiting for plot...")
 local plot = getMyPlot()
-print("[DropPadClient] found plot:", plot.Name)
 
 -- Add ProximityPrompt to a drop pad part
 local function setupDropPad(part: Part, roomId: string)
@@ -72,7 +69,6 @@ local function setupUpgradePad(roomModel: Model, roomId: string)
 end
 
 -- Wire up all drop pads found in this plot
-print("[DropPadClient] wiring drop pads, descendants:", #plot:GetDescendants())
 for _, obj in ipairs(plot:GetDescendants()) do
     if obj:IsA("Part") then
         local roomId = obj.Name:match("^DropPad_(.+)$")
