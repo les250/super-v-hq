@@ -1,0 +1,13 @@
+# Roblox
+*.rbxl
+*.rbxlx
+
+# Rojo
+*.lock
+
+# Superpowers brainstorm files
+.superpowers/
+
+# OS
+.DS_Store
+Thumbs.db
