@@ -20,7 +20,7 @@ local cache: {[number]: any} = {}
 local DEFAULT_DATA = {
     currency     = Config.STARTING_CURRENCY,
     rooms        = {},
-    vaultAmount  = 0,
+    vaultAmount  = Config.STARTING_CURRENCY,
     lastRaidedAt = 0,
 }
 
