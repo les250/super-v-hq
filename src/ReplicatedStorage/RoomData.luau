@@ -99,6 +99,18 @@ RoomData.ROOMS = {}
 for _, s in ipairs(labStations)  do table.insert(RoomData.ROOMS, s) end
 for _, r in ipairs(upperFloors)  do table.insert(RoomData.ROOMS, r) end
 
+-- ── Progressive vault caps (one per dept completion level) ─────────────────
+-- Cap = total cost of the NEXT department, so the player can always save
+-- enough to complete it without waiting. Vault room bonuses stack on top.
+local DEPT_CAPS = {
+    3000,   -- 0 depts done  → enough for all Chemistry (total: 2,750)
+    8000,   -- Chemistry done → enough for all Electronics (7,750)
+    13000,  -- Electronics done → Biology (12,750)
+    18000,  -- Biology done    → Physics (17,750)
+    23000,  -- Physics done    → Weapons (22,750)
+    30000,  -- All lab done    → upper floor saving baseline
+}
+
 -- ── Helpers ────────────────────────────────────────────────────────────────
 
 function RoomData.getRoom(id: string)
@@ -108,8 +120,28 @@ function RoomData.getRoom(id: string)
     return nil
 end
 
-function RoomData.getVaultCap(builtRooms: {[string]: number}, baseCap: number): number
-    local cap = baseCap
+-- Returns how many lab departments are fully completed (0-5)
+function RoomData.getDeptsDone(builtRooms: {[string]: number}): number
+    local done = 0
+    for dIdx, dept in ipairs(LAB_DEPTS) do
+        local allBuilt = true
+        for i = 1, 10 do
+            local id = "lab_" .. dept.name .. "_" .. i
+            if not builtRooms[id] or builtRooms[id] == 0 then
+                allBuilt = false; break
+            end
+        end
+        if allBuilt then done += 1 end
+    end
+    return done
+end
+
+-- Cap scales with dept progress; Vault room bonuses stack on top.
+-- baseCap param kept for API compatibility but is now unused.
+function RoomData.getVaultCap(builtRooms: {[string]: number}, _baseCap: number?): number
+    local deptsDone = RoomData.getDeptsDone(builtRooms)
+    local cap = DEPT_CAPS[math.clamp(deptsDone + 1, 1, #DEPT_CAPS)]
+
     local vault = RoomData.getRoom("vault")
     if vault then
         local tier = builtRooms["vault"]
