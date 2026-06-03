@@ -44,6 +44,7 @@ local function executeRaid(raider: Player, targetUserId: number)
         return
     end
 
+    local raiderData   = ds.get(raider)
     local defense      = RoomData.getDefenseReduction(targetData.rooms)
     local ARMORY_BOOST = {0.05, 0.10, 0.15}  -- +5/10/15% per tier
     local raiderArmoryTier = (raiderData and raiderData.rooms and raiderData.rooms["armory"]) or 0
@@ -55,7 +56,6 @@ local function executeRaid(raider: Player, targetUserId: number)
     targetData.lastRaidedAt = now
 
     -- Give stolen amount to raider
-    local raiderData = ds.get(raider)
     if raiderData then
         local cap = RoomData.getVaultCap(raiderData.rooms, Config.BASE_VAULT_CAP)
         if raiderData.vaultAmount < cap then
