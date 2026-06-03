@@ -88,7 +88,7 @@ end
 Remotes.UpdateCurrency.OnClientEvent:Connect(function(amount: number, cap: number, incPerMin: number)
     currencyLabel.Text = string.format("💰 %d / %d", math.floor(amount), cap)
     if incomeLabel then
-        incomeLabel.Text = string.format("📈 +%d /30s", incPerMin or 0)
+        incomeLabel.Text = string.format("📈 +%d /min", incPerMin or 0)
     end
 end)
 

@@ -58,7 +58,7 @@ Remotes.RedeemCode.OnServerInvoke = function(player: Player, code: string)
     ds.save(player)
 
     -- Push currency update to client
-    local incPer30s = math.floor(RoomData.getTotalIncome(data.rooms) * (30 / Config.INCOME_TICK_INTERVAL))
+    local incPer30s = math.floor(RoomData.getTotalIncome(data.rooms) * (60 / Config.INCOME_TICK_INTERVAL))
     Remotes.UpdateCurrency:FireClient(player, data.vaultAmount, cap, incPer30s)
 
     return {

@@ -9,7 +9,7 @@ local Config       = require(game.ReplicatedStorage.Config)
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
-local TICKS_PER_30S = 30 / Config.INCOME_TICK_INTERVAL
+local TICKS_PER_MIN = 60 / Config.INCOME_TICK_INTERVAL
 
 local UPPER_IDS = {"armory","minion_barracks","war_room","vault","escape_pod_bay"}
 local DEPT_NAMES = {
@@ -185,8 +185,8 @@ local function refreshObjectives(data)
         local tier = data.rooms[room.id] or 0
         local icon, col, sub
         if tier > 0 then
-            local inc30s = math.floor(room.tiers[tier].incomePerTick * TICKS_PER_30S)
-            icon = "✓"; col = COL_DONE; sub = "+" .. inc30s .. "/30s"
+            local incMin = math.floor(room.tiers[tier].incomePerTick * TICKS_PER_MIN)
+            icon = "✓"; col = COL_DONE; sub = "+" .. incMin .. "/min"
         else
             icon = "○"; col = COL_AVAIL; sub = "💰" .. room.tiers[1].cost
         end
@@ -205,8 +205,8 @@ local function refreshObjectives(data)
             local tier = data.rooms[id] or 0
             local icon, col, sub
             if tier > 0 then
-                local inc30s = math.floor(room.tiers[tier].incomePerTick * TICKS_PER_30S)
-                icon = "✓"; col = COL_DONE; sub = "+" .. inc30s .. "/30s"
+                local incMin = math.floor(room.tiers[tier].incomePerTick * TICKS_PER_MIN)
+                icon = "✓"; col = COL_DONE; sub = "+" .. incMin .. "/min"
             elseif labComplete then
                 icon = "○"; col = COL_AVAIL; sub = "💰" .. room.tiers[1].cost
             else
