@@ -151,6 +151,26 @@ task.spawn(function()
         setPlotOccupied(newPlot, player)
         Remotes.BaseAssigned:FireClient(player, newPlot.Name)
     end)
+
+    Remotes.TeleportToPlot.OnServerEvent:Connect(function(player, targetUserId)
+        -- Validate: player must have Escape Pod Bay built
+        local ds = getDS()
+        local data = ds.get(player)
+        if not data or not data.rooms["escape_pod_bay"] or data.rooms["escape_pod_bay"] == 0 then return end
+
+        local targetPlot = playerPlots[targetUserId]
+        if not targetPlot then return end
+
+        local spawn = targetPlot:FindFirstChild("PlotSpawn")
+        if not spawn then return end
+
+        local char = player.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = spawn.CFrame * CFrame.new(0, 4, 0)
+        end
+    end)
 end)
 
 _G.PlotManager = PlotManager

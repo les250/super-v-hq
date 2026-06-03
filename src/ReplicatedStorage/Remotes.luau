@@ -45,4 +45,6 @@ Remotes.BaseAssigned      = get("RemoteEvent",    "BaseAssigned")      -- (plotN
 Remotes.ResetPlot         = get("RemoteEvent",    "ResetPlot")         -- () server→client: hide all rooms
 Remotes.RedeemCode        = get("RemoteFunction", "RedeemCode")        -- (code: string) → {ok: bool, message: string, amount: number}
 
+Remotes.TeleportToPlot = get("RemoteEvent", "TeleportToPlot")  -- (targetUserId: number)
+
 return Remotes
