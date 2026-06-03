@@ -18,10 +18,12 @@ end
 local cache: {[number]: any} = {}
 
 local DEFAULT_DATA = {
-    currency     = Config.STARTING_CURRENCY,
-    rooms        = {},
-    vaultAmount  = Config.STARTING_CURRENCY,
-    lastRaidedAt = 0,
+    currency       = Config.STARTING_CURRENCY,
+    rooms          = {},
+    vaultAmount    = Config.STARTING_CURRENCY,
+    lastRaidedAt   = 0,
+    inventorySlots = Config.STARTING_SLOTS,
+    inventory      = {},
 }
 
 local function deepCopy(t)

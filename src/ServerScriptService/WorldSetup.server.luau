@@ -244,6 +244,20 @@ local function buildLabFloor(plot, plotCF)
     -- Lobby sign post
     lobbyVP("SignPost",   Vector3.new(1,8,1),         0,4,-4,"Dark grey",nil,true)
     lobbyVP("SignTop",    Vector3.new(12,3,0.5),       0,8.5,-4,"Bright violet",Enum.Material.Neon,true)
+    -- Wallet slot expansion kiosk (right of the lobby sign)
+    local kiosk = Instance.new("Part"); kiosk.Name = "SlotKiosk"
+    kiosk.Size = Vector3.new(3,4,3); kiosk.Anchored = true; kiosk.CanCollide = true
+    kiosk.BrickColor = BrickColor.new("Bright violet")
+    kiosk.Material = Enum.Material.SmoothPlastic
+    kiosk.CFrame = plotCF * CFrame.new(10, 2, -4)
+    kiosk.Parent = plot
+    local kioskGlow = Instance.new("Part"); kioskGlow.Name = "SlotKioskGlow"
+    kioskGlow.Size = Vector3.new(3.2, 0.3, 3.2); kioskGlow.Anchored = true
+    kioskGlow.CanCollide = false
+    kioskGlow.BrickColor = BrickColor.new("Bright violet")
+    kioskGlow.Material = Enum.Material.Neon
+    kioskGlow.CFrame = plotCF * CFrame.new(10, 4.2, -4)
+    kioskGlow.Parent = plot
     -- Lobby walls (sides only — front open to entrance, back open to spine)
     lobbyVP("LobbyWL",Vector3.new(T,H,28),-15,H/2,-18,"Really black")
     lobbyVP("LobbyWR",Vector3.new(T,H,28), 15,H/2,-18,"Really black")

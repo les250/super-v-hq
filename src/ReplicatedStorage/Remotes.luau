@@ -47,4 +47,7 @@ Remotes.RedeemCode        = get("RemoteFunction", "RedeemCode")        -- (code:
 
 Remotes.TeleportToPlot = get("RemoteEvent", "TeleportToPlot")  -- (targetUserId: number)
 
+Remotes.BuyInventorySlot = get("RemoteEvent",    "BuyInventorySlot") -- ()
+Remotes.SlotCountUpdate  = get("RemoteEvent",    "SlotCountUpdate")  -- (current: number, max: number)
+
 return Remotes

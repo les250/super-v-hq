@@ -20,4 +20,8 @@ Config.PRODUCT_CURRENCY_AMOUNTS = {
     [Config.PRODUCT_CURRENCY_LARGE]  = 5000,
 }
 
+Config.STARTING_SLOTS = 3
+Config.MAX_SLOTS      = 9
+Config.SLOT_COST      = 500
+
 return Config

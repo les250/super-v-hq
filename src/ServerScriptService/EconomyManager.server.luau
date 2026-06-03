@@ -119,3 +119,17 @@ Remotes.GetAllPlotInfo.OnServerInvoke = function(player: Player)
     end
     return result
 end
+
+Remotes.BuyInventorySlot.OnServerEvent:Connect(function(player: Player)
+    local ds   = getDS()
+    local data = ds.get(player)
+    if not data then return end
+    local slots = data.inventorySlots or Config.STARTING_SLOTS
+    if slots >= Config.MAX_SLOTS then return end
+    if data.vaultAmount < Config.SLOT_COST then return end
+    data.vaultAmount   -= Config.SLOT_COST
+    data.inventorySlots = slots + 1
+    pushCurrencyUpdate(player)
+    Remotes.SlotCountUpdate:FireClient(player, data.inventorySlots, Config.MAX_SLOTS)
+    ds.save(player)
+end)
