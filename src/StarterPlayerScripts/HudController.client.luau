@@ -12,9 +12,9 @@ gui.Name            = "SuperVHQ_HUD"
 gui.ResetOnSpawn    = false
 gui.Parent          = playerGui
 
--- Currency bar (top-left)
+-- Currency bar (top-left) — includes currency, income, and promo button
 local currencyFrame = Instance.new("Frame")
-currencyFrame.Size              = UDim2.new(0, 260, 0, 72)
+currencyFrame.Size              = UDim2.new(0, 260, 0, 112)
 currencyFrame.Position          = UDim2.new(0, 16, 0, 16)
 currencyFrame.BackgroundColor3  = Color3.fromRGB(20, 20, 30)
 currencyFrame.BackgroundTransparency = 0.3
@@ -110,30 +110,28 @@ end)
 
 -- ── Promo code UI ──────────────────────────────────────────────────────────
 
--- Promo code button — below the currency block
+-- Promo button lives INSIDE the currency frame (always visible, no clipping issues)
 local promoBtn = Instance.new("TextButton")
-promoBtn.Size     = UDim2.new(0, 160, 0, 32)
-promoBtn.Position = UDim2.new(0, 16, 0, 96)
+promoBtn.Size     = UDim2.new(1, -16, 0, 30)
+promoBtn.Position = UDim2.new(0, 8, 0, 76)
 promoBtn.BackgroundColor3 = Color3.fromRGB(60, 0, 100)
 promoBtn.BackgroundTransparency = 0.1
 promoBtn.TextColor3 = Color3.fromRGB(220, 170, 255)
 promoBtn.TextScaled = true; promoBtn.Font = Enum.Font.GothamBold
-promoBtn.Text = "🎁  Promo Code"
-promoBtn.ZIndex = 5
-promoBtn.Parent = gui
-Instance.new("UICorner", promoBtn).CornerRadius = UDim.new(0, 8)
+promoBtn.Text = "🎁  Enter Promo Code"
+promoBtn.Parent = currencyFrame   -- child of currency frame, always visible
+Instance.new("UICorner", promoBtn).CornerRadius = UDim.new(0, 6)
 local pbs = Instance.new("UIStroke", promoBtn)
 pbs.Color = Color3.fromRGB(160, 0, 220); pbs.Thickness = 1.5
 
--- Input panel (hidden by default, higher ZIndex so it renders on top)
+-- Input panel (pops up below currency block)
 local promoPanel = Instance.new("Frame")
-promoPanel.Size     = UDim2.new(0, 340, 0, 108)
-promoPanel.Position = UDim2.new(0, 16, 0, 134)
-promoPanel.ZIndex   = 6
+promoPanel.Size     = UDim2.new(0, 260, 0, 100)
+promoPanel.Position = UDim2.new(0, 0, 1, 4)   -- anchored below currencyFrame
 promoPanel.BackgroundColor3 = Color3.fromRGB(12, 0, 22)
 promoPanel.BackgroundTransparency = 0.1
 promoPanel.Visible  = false
-promoPanel.Parent   = gui
+promoPanel.Parent   = currencyFrame
 Instance.new("UICorner", promoPanel).CornerRadius = UDim.new(0, 10)
 local pps = Instance.new("UIStroke", promoPanel); pps.Color = Color3.fromRGB(160,0,220); pps.Thickness=1.5
 

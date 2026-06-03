@@ -46,15 +46,28 @@ panel.Parent = screen
 Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
 local ps = Instance.new("UIStroke", panel); ps.Color = Color3.fromRGB(160, 0, 220); ps.Thickness = 1.5
 
--- Panel title (acts as close button too)
-local titleLbl = Instance.new("TextButton")
-titleLbl.Size = UDim2.new(1, -10, 0, 36)
+-- Panel title
+local titleLbl = Instance.new("TextLabel")
+titleLbl.Size = UDim2.new(1, -46, 0, 36)
 titleLbl.Position = UDim2.new(0, 5, 0, 4)
 titleLbl.BackgroundTransparency = 1
 titleLbl.TextColor3 = Color3.fromRGB(255, 220, 50)
 titleLbl.TextScaled = true; titleLbl.Font = Enum.Font.GothamBold
-titleLbl.Text = "📋  OBJECTIVES  ✕"
+titleLbl.Text = "📋  OBJECTIVES"
+titleLbl.TextXAlignment = Enum.TextXAlignment.Left
 titleLbl.Parent = panel
+
+-- Dedicated close button (top-right corner of panel)
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 36, 0, 36)
+closeBtn.Position = UDim2.new(1, -40, 0, 4)
+closeBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+closeBtn.BackgroundTransparency = 0.3
+closeBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+closeBtn.TextScaled = true; closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Text = "✕"
+closeBtn.Parent = panel
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
 
 -- Lab progress count
 local labCountLbl = Instance.new("TextLabel")
@@ -226,8 +239,8 @@ end
 -- Toggle button on the side
 toggleBtn.Activated:Connect(function() setOpen(not isOpen) end)
 
--- Title bar inside panel also closes it
-titleLbl.Activated:Connect(function() setOpen(false) end)
+-- Dedicated ✕ button closes it
+closeBtn.Activated:Connect(function() setOpen(false) end)
 
 -- ── Auto-refresh when a room is built ─────────────────────────────────────
 
