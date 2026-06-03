@@ -3,6 +3,7 @@ local Players   = game:GetService("Players")
 local Config    = require(game.ReplicatedStorage.Config)
 local RoomData  = require(game.ReplicatedStorage.RoomData)
 local Remotes   = require(game.ReplicatedStorage.Remotes)
+local ItemData  = require(game.ReplicatedStorage.ItemData)
 
 local function getDS(): any
     -- Wait until DataStore is ready (loaded by DataStore.server.luau)
@@ -11,6 +12,17 @@ local function getDS(): any
 end
 
 local TICKS_PER_MIN = 60 / Config.INCOME_TICK_INTERVAL  -- 20 ticks/min at 3s
+
+local function getItemIncomeBoost(data): number
+    local boost = 0
+    for _, itemId in ipairs(data.inventory or {}) do
+        local item = ItemData.get(itemId)
+        if item and item.incomeBoostPct then
+            boost += item.incomeBoostPct
+        end
+    end
+    return boost
+end
 
 local function pushCurrencyUpdate(player: Player)
     local ds   = getDS()
@@ -29,7 +41,9 @@ task.spawn(function()
         for _, player in ipairs(Players:GetPlayers()) do
             local data = ds.get(player)
             if data then
-                local income = RoomData.getTotalIncome(data.rooms)
+                local baseIncome = RoomData.getTotalIncome(data.rooms)
+                local itemBoost  = getItemIncomeBoost(data)
+                local income     = math.floor(baseIncome * (1 + itemBoost))
                 local cap    = RoomData.getVaultCap(data.rooms, Config.BASE_VAULT_CAP)
                 -- Never reduce an above-cap balance (dev/promo overflow).
                 -- Only add income when below cap.
