@@ -187,9 +187,19 @@ end
 
 local function buildCorridor(model, plotCF, lx, lz, W, D)
     local function cf(dx,dy,dz) return plotCF*CFrame.new(lx+dx,dy,lz+dz) end
-    vp(model,"CC"..lx..lz, Vector3.new(W-2,0.25,D-2), cf(0,0.12,0), "Dark grey", Enum.Material.SmoothPlastic, true)
-    vp(model,"CC_strip"..lx..lz, Vector3.new(W-2,0.3,D-2), cf(0,H-1.2,0),"Bright violet",Enum.Material.Neon,true)
-    vp(model,"CC_ceil"..lx..lz,  Vector3.new(W,T,D),        cf(0,H-T/2,0),"Really black",nil,true)
+    vp(model,"CC_f"..lx..lz,  Vector3.new(W-2,0.25,D-2),cf(0,0.12,0),"Dark grey",Enum.Material.SmoothPlastic,true)
+    vp(model,"CC_s"..lx..lz,  Vector3.new(W-2,0.3,D-2),  cf(0,H-1.2,0),"Bright violet",Enum.Material.Neon,true)
+    vp(model,"CC_c"..lx..lz,  Vector3.new(W,T,D),         cf(0,H-T/2,0),"Really black",nil,true)
+    -- Side walls (enclose the corridor passage)
+    if W >= D then
+        -- E-W corridor: add N and S walls
+        vp(model,"CC_wn"..lx..lz, Vector3.new(W,H,T), cf(0,H/2,-D/2+T/2),"Really black")
+        vp(model,"CC_ws"..lx..lz, Vector3.new(W,H,T), cf(0,H/2, D/2-T/2),"Really black")
+    else
+        -- N-S corridor: add E and W walls
+        vp(model,"CC_we"..lx..lz, Vector3.new(T,H,D), cf( W/2-T/2,H/2,0),"Really black")
+        vp(model,"CC_ww"..lx..lz, Vector3.new(T,H,D), cf(-W/2+T/2,H/2,0),"Really black")
+    end
 end
 
 -- ── Station layout helpers ─────────────────────────────────────────────────
@@ -262,12 +272,29 @@ local function buildLabFloor(plot, plotCF)
     buildRoom(plot,bm,plotCF, 5, 52,-68, 32,26, "W",
         makeStations(5, grid5x2(6,7)))
 
-    -- 3. Corridors
+    -- 3. Corridors (enclosed passages between rooms)
     buildCorridor(bm,plotCF,   0,-44, 14,20)   -- N-S spine (lobby→chemistry)
     buildCorridor(bm,plotCF,  37,-22, 24,12)   -- R-wing (lobby→biology)
     buildCorridor(bm,plotCF, -37,-22, 24,12)   -- L-wing (lobby→physics)
     buildCorridor(bm,plotCF, -34,-68, 14,12)   -- Back-L (spine→electronics)
     buildCorridor(bm,plotCF,  34,-68, 14,12)   -- Back-R (spine→weapons)
+
+    -- 4. Stairwell extension — enclosed hall at the very back of the building
+    -- Houses all 5 staircases/drop pads; players reach it through Chemistry back wall
+    local SWZ = -94   -- stairwell centre Z (local)
+    local SWW = 116   -- same width as lab
+    local SWD = 14
+    local function swvp(name,sz,dx,dy,dz,col,mat,nc)
+        vp(bm,name,sz,plotCF*CFrame.new(dx,dy,SWZ+dz),col,mat,nc)
+    end
+    swvp("SW_Floor",  Vector3.new(SWW,0.25,SWD),   0,0.12,0,"Dark grey",Enum.Material.SmoothPlastic,true)
+    swvp("SW_Ceil",   Vector3.new(SWW,T,SWD),       0,H-T/2,0,"Really black",nil,true)
+    swvp("SW_BkWall", Vector3.new(SWW,H,T),         0,H/2,SWD/2-T/2,"Really black")
+    swvp("SW_LWall",  Vector3.new(T,H,SWD),        -SWW/2+T/2,H/2,0,"Really black")
+    swvp("SW_RWall",  Vector3.new(T,H,SWD),         SWW/2-T/2,H/2,0,"Really black")
+    swvp("SW_Strip",  Vector3.new(SWW-2,0.3,SWD-2), 0,H-1.2,0,"Bright violet",Enum.Material.Neon,true)
+    -- Connection passage from Chemistry's back wall → stairwell (gap in Chemistry N-wall handled by room's solid-N wall; add a short link corridor)
+    buildCorridor(bm,plotCF, 0,-86, 12,10)   -- chemistry → stairwell link
 end
 
 -- ── Upper floors (behind lab, stacked, accessible via staircases) ──────────
@@ -280,43 +307,50 @@ local UPPER = {
     {id="escape_pod_bay", wc="White",        fc="Mid gray",       floor=6},
 }
 
+-- Staircase X positions inside stairwell (evenly spread, all within ±50)
+local STAIR_X = {-44, -22, 0, 22, 44}  -- fIdx 1-5
+local STAIR_Z = -94                      -- inside the stairwell extension
+
 local function buildUpperFloor(plot, plotCF, fd)
-    local yBase = H * fd.floor
-    local W, D  = 28, 28
-    local fIdx  = fd.floor - 1
-    local xOff  = (fIdx - 3) * (W + 4)   -- spread 5 floors side-by-side
-    local lx, lz = xOff, -(70 + D/2 + 6) -- behind the lab back wall
+    local fIdx  = fd.floor - 1             -- 1-5
+    local yBase = H * (fd.floor - 1)       -- stack directly above lab: 14,28,42,56,70
+    local W, D  = 22, 22
+    local lx    = STAIR_X[fIdx]
+    local lz    = STAIR_Z                  -- centred over the stairwell
 
     local function cf(dx,dy,dz) return plotCF*CFrame.new(lx+dx,yBase+dy,lz+dz) end
 
+    -- Hidden room (becomes visible when bought)
     local m=Instance.new("Model"); m.Name="Room_"..fd.id; m.Parent=plot
 
-    hp(m,"Floor",Vector3.new(W,T,D),        cf(0,T/2,0),       fd.fc,nil,true)
-    hp(m,"Ceil", Vector3.new(W,T,D),        cf(0,H-T/2,0),     fd.wc,nil,false)
-    hp(m,"BkW",  Vector3.new(W,H,T),        cf(0,H/2,D/2-T/2), fd.wc,nil,true)
-    hp(m,"LW",   Vector3.new(T,H,D),        cf(-W/2+T/2,H/2,0),fd.wc,nil,true)
-    hp(m,"RW",   Vector3.new(T,H,D),        cf( W/2-T/2,H/2,0),fd.wc,nil,true)
-    local fw=(W-8)/2
-    hp(m,"FrL",  Vector3.new(fw,H,T),       cf(-(W/2-fw/2),H/2,-D/2+T/2),fd.wc,nil,true)
-    hp(m,"FrR",  Vector3.new(fw,H,T),       cf( (W/2-fw/2),H/2,-D/2+T/2),fd.wc,nil,true)
-    hp(m,"FrTop",Vector3.new(8,4,T),        cf(0,H-2,-D/2+T/2),fd.wc,nil,true)
-    hp(m,"Strip",Vector3.new(W-2,0.3,D-2),  cf(0,H-1.5,0),"Bright violet",Enum.Material.Neon,false)
+    hp(m,"Floor",  Vector3.new(W,T,D),      cf(0,T/2,0),         fd.fc,nil,true)
+    -- No ceiling — floor of the floor above acts as ceiling, keeps stairwell open
+    hp(m,"BkW",    Vector3.new(W,H,T),      cf(0,H/2, D/2-T/2),  fd.wc,nil,true)
+    hp(m,"FrW",    Vector3.new(W,H,T),      cf(0,H/2,-D/2+T/2),  fd.wc,nil,true)
+    hp(m,"LW",     Vector3.new(T,H,D),      cf(-W/2+T/2,H/2,0),  fd.wc,nil,true)
+    hp(m,"RW",     Vector3.new(T,H,D),      cf( W/2-T/2,H/2,0),  fd.wc,nil,true)
+    hp(m,"Strip",  Vector3.new(W-2,0.3,D-2),cf(0,H-1.2,0),       "Bright violet",Enum.Material.Neon,false)
 
-    -- Drop pad at ground level in front of staircase
-    local padCF = plotCF*CFrame.new(lx, 0.25, lz-D/2-4)
+    -- Drop pad INSIDE the stairwell hall at ground level (Y=0.25)
+    -- (Gating is handled by EconomyManager prerequisite check, not physical placement)
     local pad=Instance.new("Part"); pad.Name="DropPad_"..fd.id
-    pad.Size=Vector3.new(6,0.3,6); pad.CFrame=padCF
+    pad.Size=Vector3.new(5,0.3,5)
+    pad.CFrame=plotCF*CFrame.new(lx, 0.25, STAIR_Z)
     pad.Anchored=true; pad.BrickColor=BrickColor.new("Bright green"); pad.Material=Enum.Material.Neon
     pad.Parent=plot
 
-    -- Visible staircase
+    -- Staircase — HIDDEN until bought (hp with ShouldCollide=true so walkable once revealed)
     local sm=Instance.new("Model"); sm.Name="Stair_"..fd.id; sm.Parent=plot
-    local steps=math.ceil(yBase/1.8)
+    local steps = math.ceil(H/1.6)  -- steps to climb one floor (14 studs)
     for s=1,steps do
-        vp(sm,"S"..s,Vector3.new(W-2,0.5,2),
-            plotCF*CFrame.new(lx, s*1.8-0.25, lz-D/2-4+s*1.3),
-            "Dark grey",Enum.Material.SmoothPlastic)
+        hp(sm,"S"..s, Vector3.new(4,0.5,1.8),
+            plotCF*CFrame.new(lx, yBase + s*1.6 - 0.8, STAIR_Z - 1 + s*1.1),
+            "Dark grey",Enum.Material.SmoothPlastic,true)  -- ShouldCollide=true
     end
+    -- Stair landing at the floor above
+    hp(sm,"Land",Vector3.new(4,0.5,4),
+        plotCF*CFrame.new(lx, yBase+H-0.25, STAIR_Z),
+        "Dark grey",Enum.Material.SmoothPlastic,true)
 end
 
 -- ── Plots ──────────────────────────────────────────────────────────────────

@@ -127,7 +127,7 @@ Remotes.RoomBuilt.OnClientEvent:Connect(function(roomId: string, tier: number)
         end
     end
 
-    -- Make the pre-placed room model visible; restore collision from attribute
+    -- Reveal room model
     local roomModel = plot:FindFirstChild("Room_" .. roomId)
     if roomModel and roomModel:IsA("Model") then
         for _, part in ipairs(roomModel:GetDescendants()) do
@@ -138,6 +138,22 @@ Remotes.RoomBuilt.OnClientEvent:Connect(function(roomId: string, tier: number)
                 end
             end
         end
+    end
+
+    -- Reveal staircase for this floor (hidden until bought)
+    local stairModel = plot:FindFirstChild("Stair_" .. roomId)
+    if stairModel then
+        for _, part in ipairs(stairModel:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = 0
+                if part:GetAttribute("ShouldCollide") == true then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
+
+    if roomModel and roomModel:IsA("Model") then
         -- If tier 1 just built, add the upgrade proximity prompt
         if tier == 1 then
             setupUpgradePad(roomModel, roomId)
