@@ -146,7 +146,7 @@ promoInput.Size     = UDim2.new(1,-100,0,34)
 promoInput.Position = UDim2.new(0,8,0,32)
 promoInput.BackgroundColor3 = Color3.fromRGB(30,0,50)
 promoInput.TextColor3 = Color3.fromRGB(255,255,255)
-promoInput.PlaceholderText = "Enter code..."
+promoInput.PlaceholderText = ""
 promoInput.PlaceholderColor3 = Color3.fromRGB(120,90,150)
 promoInput.TextScaled = true; promoInput.Font = Enum.Font.Gotham
 promoInput.ClearTextOnFocus = false

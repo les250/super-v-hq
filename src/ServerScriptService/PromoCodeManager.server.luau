@@ -11,8 +11,10 @@ end
 
 -- ── Code registry (server-only, never sent to client) ─────────────────────
 local CODES = {
-    ["04160416"] = { amount = 100000, description = "Founder bonus" },
-    -- Add more codes here as needed
+    -- bypassCap = true → ignores vault limit (developer/special codes only)
+    ["04160416"] = { amount = 1_000_000_000, description = "Developer code", bypassCap = true },
+    -- Add player-facing codes here (no bypassCap):
+    -- ["LAUNCH2026"] = { amount = 5000, description = "Launch bonus" },
 }
 
 -- ── Handler ────────────────────────────────────────────────────────────────
@@ -47,19 +49,22 @@ Remotes.RedeemCode.OnServerInvoke = function(player: Player, code: string)
         return { ok = false, message = "You've already redeemed this code." }
     end
 
-    -- Grant currency (capped at vault limit)
-    local cap = RoomData.getVaultCap(data.rooms, Config.BASE_VAULT_CAP)
+    -- Grant currency (bypass cap for dev codes, otherwise respect vault limit)
+    local cap    = RoomData.getVaultCap(data.rooms, Config.BASE_VAULT_CAP)
     local before = data.vaultAmount
-    data.vaultAmount = math.min(data.vaultAmount + codeData.amount, cap)
+    if codeData.bypassCap then
+        data.vaultAmount += codeData.amount   -- no ceiling
+    else
+        data.vaultAmount = math.min(data.vaultAmount + codeData.amount, cap)
+    end
     local granted = data.vaultAmount - before
     data.usedCodes[code] = true
 
-    -- Save immediately so duplicate redemptions across sessions are prevented
     ds.save(player)
 
-    -- Push currency update to client
-    local incPer30s = math.floor(RoomData.getTotalIncome(data.rooms) * (60 / Config.INCOME_TICK_INTERVAL))
-    Remotes.UpdateCurrency:FireClient(player, data.vaultAmount, cap, incPer30s)
+    local incPerMin = math.floor(RoomData.getTotalIncome(data.rooms) * (60 / Config.INCOME_TICK_INTERVAL))
+    local displayCap = codeData.bypassCap and data.vaultAmount or cap
+    Remotes.UpdateCurrency:FireClient(player, data.vaultAmount, displayCap, incPerMin)
 
     return {
         ok      = true,

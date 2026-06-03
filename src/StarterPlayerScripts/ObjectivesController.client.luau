@@ -12,9 +12,14 @@ local playerGui = player:WaitForChild("PlayerGui")
 local TICKS_PER_MIN = 60 / Config.INCOME_TICK_INTERVAL
 
 local UPPER_IDS = {"armory","minion_barracks","war_room","vault","escape_pod_bay"}
-local DEPT_NAMES = {
-    chemistry="Chemistry", electronics="Electronics", biology="Biology",
-    physics="Physics", weapons="Weapons R&D",
+
+-- Per-department visual identity (color, icon, label)
+local DEPT_STYLE = {
+    chemistry   = { col=Color3.fromRGB(80,255,120),  icon="⚗",  label="Chemistry"   },
+    electronics = { col=Color3.fromRGB(80,160,255),  icon="⚡",  label="Electronics" },
+    biology     = { col=Color3.fromRGB(80,220,220),  icon="🧬", label="Biology"     },
+    physics     = { col=Color3.fromRGB(180,80,255),  icon="⚛",  label="Physics"     },
+    weapons     = { col=Color3.fromRGB(255,80,80),   icon="💥", label="Weapons R&D" },
 }
 
 -- ── Build UI ───────────────────────────────────────────────────────────────
@@ -170,15 +175,30 @@ local function refreshObjectives(data)
         Color3.fromRGB(180, 255, 180))
     order += 1
 
-    local currentDept = ""
+    local currentDeptKey = ""
     for _, room in ipairs(RoomData.ROOMS) do
         if room.unlockOrder ~= 1 then break end
 
-        -- Dept header
-        local deptName = DEPT_NAMES[room.id:match("lab_(.-)_%d+") or ""] or ""
-        if deptName ~= "" and deptName ~= currentDept then
-            currentDept = deptName
-            makeSectionHeader(scroll, order, "  " .. deptName, Color3.fromRGB(160, 200, 255))
+        -- Dept header (new dept = new colored section)
+        local deptKey = room.id:match("lab_(.-)_%d+") or ""
+        local style   = DEPT_STYLE[deptKey]
+        if style and deptKey ~= currentDeptKey then
+            currentDeptKey = deptKey
+            -- Check if this dept is fully complete
+            local deptDone = true
+            for i = 1, 10 do
+                local sid = "lab_" .. deptKey .. "_" .. i
+                if not data.rooms[sid] or data.rooms[sid] == 0 then deptDone = false; break end
+            end
+            local headerIcon = deptDone and "✓  " or (style.icon .. "  ")
+            local hdr = makeSectionHeader(scroll, order,
+                headerIcon .. style.label .. (deptDone and "  ✅" or ""),
+                style.col)
+            -- Tint the header background with dept color
+            hdr.BackgroundColor3 = Color3.fromRGB(
+                math.floor(style.col.R * 30),
+                math.floor(style.col.G * 30),
+                math.floor(style.col.B * 30))
             order += 1
         end
 
@@ -186,11 +206,22 @@ local function refreshObjectives(data)
         local icon, col, sub
         if tier > 0 then
             local incMin = math.floor(room.tiers[tier].incomePerTick * TICKS_PER_MIN)
-            icon = "✓"; col = COL_DONE; sub = "+" .. incMin .. "/min"
+            icon = "✓"
+            col  = style and Color3.fromRGB(
+                math.floor(style.col.R*200), math.floor(style.col.G*200), math.floor(style.col.B*200)
+            ) or COL_DONE
+            sub = "+" .. incMin .. "/min"
         else
             icon = "○"; col = COL_AVAIL; sub = "💰" .. room.tiers[1].cost
         end
-        makeRow(scroll, order, icon, room.name, sub, col)
+
+        -- Row bg tinted with dept color when done
+        local rowBg = (tier > 0 and style) and
+            Color3.fromRGB(
+                math.floor(style.col.R * 15),
+                math.floor(style.col.G * 15),
+                math.floor(style.col.B * 15)) or nil
+        makeRow(scroll, order, icon, room.name, sub, col, rowBg)
         order += 1
     end
 
