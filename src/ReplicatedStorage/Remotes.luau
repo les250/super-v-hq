@@ -25,6 +25,7 @@ local Remotes = {}
 -- Server → Client events
 Remotes.UpdateCurrency    = get("RemoteEvent",    "UpdateCurrency")    -- (amount: number, vaultCap: number)
 Remotes.RaidNotification  = get("RemoteEvent",    "RaidNotification")  -- (raiderName: string, stolen: number)
+Remotes.RaidCooldownUpdate = get("RemoteEvent", "RaidCooldownUpdate") -- (secondsRemaining: number)
 Remotes.RoomBuilt         = get("RemoteEvent",    "RoomBuilt")         -- (roomId: string, tier: number)
 
 -- Client → Server events

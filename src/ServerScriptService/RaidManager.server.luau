@@ -10,6 +10,14 @@ local function getDS(): any
     return _G.DataStore
 end
 
+local function pushCooldown(player: Player)
+    local ds   = getDS()
+    local data = ds.get(player)
+    if not data then return end
+    local remaining = math.max(0, Config.RAID_COOLDOWN - (os.time() - (data.lastRaidedAt or 0)))
+    Remotes.RaidCooldownUpdate:FireClient(player, remaining)
+end
+
 -- Stores which player each raider is targeting
 -- { [raiderUserId: number]: targetUserId: number }
 local pendingRaids: {[number]: number} = {}
@@ -57,6 +65,7 @@ local function executeRaid(raider: Player, targetUserId: number)
     local targetCap = RoomData.getVaultCap(targetData.rooms, Config.BASE_VAULT_CAP)
     Remotes.UpdateCurrency:FireClient(targetPlayer, targetData.vaultAmount, targetCap)
     Remotes.RaidNotification:FireClient(targetPlayer, raider.Name, stolen)
+    pushCooldown(targetPlayer)
 
     -- Save both sides immediately so a server crash can't desync raider gain vs victim loss
     ds.save(targetPlayer)
@@ -100,3 +109,8 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 
     return Enum.ProductPurchaseDecision.NotProcessedYet
 end
+
+game:GetService("Players").PlayerAdded:Connect(function(player)
+    task.wait(2)  -- wait for data to load
+    pushCooldown(player)
+end)

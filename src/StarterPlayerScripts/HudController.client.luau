@@ -14,7 +14,7 @@ gui.Parent          = playerGui
 
 -- Currency bar (top-left) — includes currency, income, and promo button
 local currencyFrame = Instance.new("Frame")
-currencyFrame.Size              = UDim2.new(0, 260, 0, 112)
+currencyFrame.Size              = UDim2.new(0, 260, 0, 140)
 currencyFrame.Position          = UDim2.new(0, 16, 0, 16)
 currencyFrame.BackgroundColor3  = Color3.fromRGB(20, 20, 30)
 currencyFrame.BackgroundTransparency = 0.3
@@ -46,6 +46,48 @@ incomeLabel.Font              = Enum.Font.Gotham
 incomeLabel.Text              = "📈 +0 /min"
 incomeLabel.TextXAlignment    = Enum.TextXAlignment.Left
 incomeLabel.Parent            = currencyFrame
+
+-- Raid shield countdown (hidden when no cooldown)
+local shieldFrame = Instance.new("Frame")
+shieldFrame.Size     = UDim2.new(1, -16, 0, 24)
+shieldFrame.Position = UDim2.new(0, 8, 0, 72)
+shieldFrame.BackgroundColor3 = Color3.fromRGB(0, 40, 60)
+shieldFrame.BackgroundTransparency = 0.3
+shieldFrame.Visible  = false
+shieldFrame.Parent   = currencyFrame
+Instance.new("UICorner", shieldFrame).CornerRadius = UDim.new(0, 4)
+
+local shieldLabel = Instance.new("TextLabel")
+shieldLabel.Size = UDim2.new(1, -8, 1, 0)
+shieldLabel.Position = UDim2.new(0, 4, 0, 0)
+shieldLabel.BackgroundTransparency = 1
+shieldLabel.TextColor3 = Color3.fromRGB(80, 200, 255)
+shieldLabel.TextScaled = true
+shieldLabel.Font = Enum.Font.Gotham
+shieldLabel.TextXAlignment = Enum.TextXAlignment.Left
+shieldLabel.Parent = shieldFrame
+
+local cooldownRemaining = 0
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if cooldownRemaining > 0 then
+            cooldownRemaining -= 1
+            local m = math.floor(cooldownRemaining / 60)
+            local s = cooldownRemaining % 60
+            shieldLabel.Text = string.format("🛡 Raid shield: %d:%02d", m, s)
+            shieldFrame.Visible = true
+        else
+            shieldFrame.Visible = false
+        end
+    end
+end)
+
+Remotes.RaidCooldownUpdate.OnClientEvent:Connect(function(secs: number)
+    cooldownRemaining = math.floor(secs)
+    shieldFrame.Visible = cooldownRemaining > 0
+end)
 
 -- Raid notification toast (centre-top, hidden by default)
 local toastFrame = Instance.new("Frame")
@@ -113,7 +155,7 @@ end)
 -- Promo button lives INSIDE the currency frame (always visible, no clipping issues)
 local promoBtn = Instance.new("TextButton")
 promoBtn.Size     = UDim2.new(1, -16, 0, 30)
-promoBtn.Position = UDim2.new(0, 8, 0, 76)
+promoBtn.Position = UDim2.new(0, 8, 0, 104)
 promoBtn.BackgroundColor3 = Color3.fromRGB(60, 0, 100)
 promoBtn.BackgroundTransparency = 0.1
 promoBtn.TextColor3 = Color3.fromRGB(220, 170, 255)
