@@ -47,7 +47,9 @@ local function executeRaid(raider: Player, targetUserId: number)
     local raiderData = ds.get(raider)
     if raiderData then
         local cap = RoomData.getVaultCap(raiderData.rooms, Config.BASE_VAULT_CAP)
-        raiderData.vaultAmount = math.min(raiderData.vaultAmount + stolen, cap)
+        if raiderData.vaultAmount < cap then
+            raiderData.vaultAmount = math.min(raiderData.vaultAmount + stolen, cap)
+        end
         Remotes.UpdateCurrency:FireClient(raider, raiderData.vaultAmount, cap)
     end
 

@@ -31,7 +31,11 @@ task.spawn(function()
             if data then
                 local income = RoomData.getTotalIncome(data.rooms)
                 local cap    = RoomData.getVaultCap(data.rooms, Config.BASE_VAULT_CAP)
-                data.vaultAmount = math.min(data.vaultAmount + income, cap)
+                -- Never reduce an above-cap balance (dev/promo overflow).
+                -- Only add income when below cap.
+                if data.vaultAmount < cap then
+                    data.vaultAmount = math.min(data.vaultAmount + income, cap)
+                end
                 pushCurrencyUpdate(player)
             end
         end
