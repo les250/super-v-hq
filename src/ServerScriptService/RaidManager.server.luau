@@ -45,7 +45,10 @@ local function executeRaid(raider: Player, targetUserId: number)
     end
 
     local defense      = RoomData.getDefenseReduction(targetData.rooms)
-    local stealPercent = math.max(0, Config.RAID_STEAL_PERCENT - defense)
+    local ARMORY_BOOST = {0.05, 0.10, 0.15}  -- +5/10/15% per tier
+    local raiderArmoryTier = (raiderData and raiderData.rooms and raiderData.rooms["armory"]) or 0
+    local boost = raiderArmoryTier > 0 and ARMORY_BOOST[raiderArmoryTier] or 0
+    local stealPercent = math.max(0, Config.RAID_STEAL_PERCENT + boost - defense)
     local stolen       = math.floor(targetData.vaultAmount * stealPercent)
 
     targetData.vaultAmount  = math.max(0, targetData.vaultAmount - stolen)
