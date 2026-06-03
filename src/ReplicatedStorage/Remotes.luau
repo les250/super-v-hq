@@ -51,4 +51,6 @@ Remotes.BuyInventorySlot = get("RemoteEvent",    "BuyInventorySlot") -- ()
 Remotes.SlotCountUpdate  = get("RemoteEvent",    "SlotCountUpdate")  -- (current: number, max: number)
 Remotes.InventoryUpdate  = get("RemoteEvent",    "InventoryUpdate")  -- (inventory: {string})
 
+Remotes.CraftItem = get("RemoteFunction", "CraftItem")  -- (deptKey: string) → {ok: bool, message: string}
+
 return Remotes

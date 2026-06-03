@@ -147,3 +147,48 @@ Remotes.BuyInventorySlot.OnServerEvent:Connect(function(player: Player)
     Remotes.SlotCountUpdate:FireClient(player, data.inventorySlots, Config.MAX_SLOTS)
     ds.save(player)
 end)
+
+local CRAFT_RECIPES = {
+    chemistry   = {itemId="stim_pack",      cost=2000},
+    electronics = {itemId="emp_grenade",    cost=3000},
+    biology     = {itemId="armor_chip",     cost=4000},
+    physics     = {itemId="vault_override", cost=6000},
+    weapons     = {itemId="minion_core",    cost=5000},
+}
+
+Remotes.CraftItem.OnServerInvoke = function(player: Player, deptKey: string)
+    local ds   = getDS()
+    local data = ds.get(player)
+    if not data then return {ok=false, message="Data not ready"} end
+
+    -- Must have all 5 lab departments complete
+    local deptsDone = RoomData.getDeptsDone(data.rooms)
+    if deptsDone < 5 then
+        return {ok=false, message="Complete all Lab departments first"}
+    end
+
+    local recipe = CRAFT_RECIPES[deptKey]
+    if not recipe then return {ok=false, message="Unknown recipe"} end
+
+    -- Check inventory space
+    local slots = data.inventorySlots or Config.STARTING_SLOTS
+    local inv   = data.inventory or {}
+    if #inv >= slots then
+        return {ok=false, message="Inventory full! Buy more slots."}
+    end
+
+    if data.vaultAmount < recipe.cost then
+        return {ok=false, message=string.format("Need 💰%d to craft", recipe.cost)}
+    end
+
+    data.vaultAmount -= recipe.cost
+    table.insert(inv, recipe.itemId)
+    data.inventory = inv
+
+    pushCurrencyUpdate(player)
+    Remotes.InventoryUpdate:FireClient(player, inv)
+    ds.save(player)
+
+    local itemName = recipe.itemId:gsub("_", " ")
+    return {ok=true, message="Crafted " .. itemName}
+end

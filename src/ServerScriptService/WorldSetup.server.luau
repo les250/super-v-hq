@@ -258,6 +258,26 @@ local function buildLabFloor(plot, plotCF)
     kioskGlow.Material = Enum.Material.Neon
     kioskGlow.CFrame = plotCF * CFrame.new(10, 4.2, -4)
     kioskGlow.Parent = plot
+    -- Crafting kiosks — one per department, positioned in the back of each dept room
+    local CRAFT_DEPT_DATA = {
+        {dept="chemistry",   lx=0,    lz=-68, cx=-14},
+        {dept="biology",     lx=60,   lz=-22, cx=-8 },
+        {dept="physics",     lx=-60,  lz=-22, cx=8  },
+        {dept="electronics", lx=-52,  lz=-68, cx=-10},
+        {dept="weapons",     lx=52,   lz=-68, cx=10 },
+    }
+    local CRAFT_COLORS = {
+        chemistry="Bright green", electronics="Bright blue", biology="Cyan",
+        physics="Bright violet", weapons="Bright red"
+    }
+    for _, cd in ipairs(CRAFT_DEPT_DATA) do
+        local ck = Instance.new("Part"); ck.Name = "CraftKiosk_" .. cd.dept
+        ck.Size = Vector3.new(2,3,2); ck.Anchored = true; ck.CanCollide = true
+        ck.BrickColor = BrickColor.new(CRAFT_COLORS[cd.dept] or "Bright violet")
+        ck.Material = Enum.Material.Neon
+        ck.CFrame = plotCF * CFrame.new(cd.lx + cd.cx, 1.5, cd.lz)
+        ck.Parent = plot
+    end
     -- Lobby walls (sides only — front open to entrance, back open to spine)
     lobbyVP("LobbyWL",Vector3.new(T,H,28),-15,H/2,-18,"Really black")
     lobbyVP("LobbyWR",Vector3.new(T,H,28), 15,H/2,-18,"Really black")
