@@ -42,5 +42,6 @@ Remotes.ClaimBase         = get("RemoteEvent",    "ClaimBase")         -- (plotN
 Remotes.MoveBase          = get("RemoteEvent",    "MoveBase")          -- (plotName: string)
 Remotes.BaseAssigned      = get("RemoteEvent",    "BaseAssigned")      -- (plotName: string) server→client
 Remotes.ResetPlot         = get("RemoteEvent",    "ResetPlot")         -- () server→client: hide all rooms
+Remotes.RedeemCode        = get("RemoteFunction", "RedeemCode")        -- (code: string) → {ok: bool, message: string, amount: number}
 
 return Remotes

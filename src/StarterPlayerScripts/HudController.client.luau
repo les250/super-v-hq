@@ -107,3 +107,97 @@ task.spawn(function()
         currencyLabel.Text = string.format("💰 %d / %d", math.floor(data.vaultAmount), cap)
     end
 end)
+
+-- ── Promo code UI ──────────────────────────────────────────────────────────
+
+-- Small button below income label
+local promoBtn = Instance.new("TextButton")
+promoBtn.Size     = UDim2.new(0, 130, 0, 28)
+promoBtn.Position = UDim2.new(0, 16, 0, 96)
+promoBtn.BackgroundColor3 = Color3.fromRGB(50, 0, 80)
+promoBtn.BackgroundTransparency = 0.3
+promoBtn.TextColor3 = Color3.fromRGB(200, 150, 255)
+promoBtn.TextScaled = true; promoBtn.Font = Enum.Font.Gotham
+promoBtn.Text = "🎁 Promo Code"
+promoBtn.Parent = gui
+Instance.new("UICorner", promoBtn).CornerRadius = UDim.new(0, 6)
+
+-- Input panel (hidden by default)
+local promoPanel = Instance.new("Frame")
+promoPanel.Size     = UDim2.new(0, 340, 0, 100)
+promoPanel.Position = UDim2.new(0, 16, 0, 130)
+promoPanel.BackgroundColor3 = Color3.fromRGB(12, 0, 22)
+promoPanel.BackgroundTransparency = 0.1
+promoPanel.Visible  = false
+promoPanel.Parent   = gui
+Instance.new("UICorner", promoPanel).CornerRadius = UDim.new(0, 10)
+local pps = Instance.new("UIStroke", promoPanel); pps.Color = Color3.fromRGB(160,0,220); pps.Thickness=1.5
+
+local promoTitle = Instance.new("TextLabel")
+promoTitle.Size = UDim2.new(1,0,0,28); promoTitle.BackgroundTransparency=1
+promoTitle.TextColor3=Color3.fromRGB(255,220,50); promoTitle.TextScaled=true
+promoTitle.Font=Enum.Font.GothamBold; promoTitle.Text="🎁  Enter Promo Code"
+promoTitle.Parent=promoPanel
+
+local promoInput = Instance.new("TextBox")
+promoInput.Size     = UDim2.new(1,-100,0,34)
+promoInput.Position = UDim2.new(0,8,0,32)
+promoInput.BackgroundColor3 = Color3.fromRGB(30,0,50)
+promoInput.TextColor3 = Color3.fromRGB(255,255,255)
+promoInput.PlaceholderText = "Enter code..."
+promoInput.PlaceholderColor3 = Color3.fromRGB(120,90,150)
+promoInput.TextScaled = true; promoInput.Font = Enum.Font.Gotham
+promoInput.ClearTextOnFocus = false
+promoInput.Parent = promoPanel
+Instance.new("UICorner", promoInput).CornerRadius = UDim.new(0, 6)
+
+local promoSubmit = Instance.new("TextButton")
+promoSubmit.Size     = UDim2.new(0,80,0,34)
+promoSubmit.Position = UDim2.new(1,-88,0,32)
+promoSubmit.BackgroundColor3 = Color3.fromRGB(80,0,140)
+promoSubmit.TextColor3 = Color3.fromRGB(255,255,255)
+promoSubmit.TextScaled = true; promoSubmit.Font = Enum.Font.GothamBold
+promoSubmit.Text = "Redeem"
+promoSubmit.Parent = promoPanel
+Instance.new("UICorner", promoSubmit).CornerRadius = UDim.new(0, 6)
+
+local promoStatus = Instance.new("TextLabel")
+promoStatus.Size = UDim2.new(1,-16,0,24); promoStatus.Position=UDim2.new(0,8,0,70)
+promoStatus.BackgroundTransparency=1; promoStatus.TextScaled=true
+promoStatus.Font=Enum.Font.Gotham; promoStatus.Text=""
+promoStatus.TextXAlignment=Enum.TextXAlignment.Left
+promoStatus.Parent=promoPanel
+
+-- Toggle panel
+promoBtn.Activated:Connect(function()
+    promoPanel.Visible = not promoPanel.Visible
+    if promoPanel.Visible then promoInput:CaptureFocus() end
+end)
+
+-- Submit
+local function redeem()
+    local code = promoInput.Text
+    if code == "" then return end
+    promoSubmit.Active = false; promoSubmit.Text = "..."
+    promoStatus.TextColor3 = Color3.fromRGB(200,200,200)
+    promoStatus.Text = "Checking..."
+
+    local result = Remotes.RedeemCode:InvokeServer(code)
+    promoSubmit.Active = true; promoSubmit.Text = "Redeem"
+
+    if result.ok then
+        promoStatus.TextColor3 = Color3.fromRGB(100,255,120)
+        promoStatus.Text = result.message
+        promoInput.Text = ""
+        showToast(result.message)
+        task.delay(2, function() promoPanel.Visible = false end)
+    else
+        promoStatus.TextColor3 = Color3.fromRGB(255,100,100)
+        promoStatus.Text = result.message
+    end
+end
+
+promoSubmit.Activated:Connect(redeem)
+promoInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then redeem() end
+end)
