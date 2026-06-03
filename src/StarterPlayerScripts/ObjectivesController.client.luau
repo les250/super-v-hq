@@ -46,14 +46,14 @@ panel.Parent = screen
 Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
 local ps = Instance.new("UIStroke", panel); ps.Color = Color3.fromRGB(160, 0, 220); ps.Thickness = 1.5
 
--- Panel title
-local titleLbl = Instance.new("TextLabel")
+-- Panel title (acts as close button too)
+local titleLbl = Instance.new("TextButton")
 titleLbl.Size = UDim2.new(1, -10, 0, 36)
 titleLbl.Position = UDim2.new(0, 5, 0, 4)
 titleLbl.BackgroundTransparency = 1
 titleLbl.TextColor3 = Color3.fromRGB(255, 220, 50)
 titleLbl.TextScaled = true; titleLbl.Font = Enum.Font.GothamBold
-titleLbl.Text = "📋  OBJECTIVES"
+titleLbl.Text = "📋  OBJECTIVES  ✕"
 titleLbl.Parent = panel
 
 -- Lab progress count
@@ -212,17 +212,22 @@ local isOpen = false
 local OPEN_POS  = UDim2.new(1, -314, 0.09, 0)
 local CLOSE_POS = UDim2.new(1, 4,    0.09, 0)
 
-toggleBtn.Activated:Connect(function()
-    isOpen = not isOpen
+local function setOpen(open: boolean)
+    isOpen = open
     TweenService:Create(panel, TweenInfo.new(0.25, Enum.EasingStyle.Quad),
         {Position = isOpen and OPEN_POS or CLOSE_POS}):Play()
     toggleBtn.Text = isOpen and "📋\n✕" or "📋\nOBJ"
     if isOpen then
-        -- Refresh on open
         local data = Remotes.GetPlayerData:InvokeServer()
         refreshObjectives(data)
     end
-end)
+end
+
+-- Toggle button on the side
+toggleBtn.Activated:Connect(function() setOpen(not isOpen) end)
+
+-- Title bar inside panel also closes it
+titleLbl.Activated:Connect(function() setOpen(false) end)
 
 -- ── Auto-refresh when a room is built ─────────────────────────────────────
 

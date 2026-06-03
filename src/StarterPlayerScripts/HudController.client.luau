@@ -110,22 +110,26 @@ end)
 
 -- ── Promo code UI ──────────────────────────────────────────────────────────
 
--- Small button below income label
+-- Promo code button — below the currency block
 local promoBtn = Instance.new("TextButton")
-promoBtn.Size     = UDim2.new(0, 130, 0, 28)
+promoBtn.Size     = UDim2.new(0, 160, 0, 32)
 promoBtn.Position = UDim2.new(0, 16, 0, 96)
-promoBtn.BackgroundColor3 = Color3.fromRGB(50, 0, 80)
-promoBtn.BackgroundTransparency = 0.3
-promoBtn.TextColor3 = Color3.fromRGB(200, 150, 255)
-promoBtn.TextScaled = true; promoBtn.Font = Enum.Font.Gotham
-promoBtn.Text = "🎁 Promo Code"
+promoBtn.BackgroundColor3 = Color3.fromRGB(60, 0, 100)
+promoBtn.BackgroundTransparency = 0.1
+promoBtn.TextColor3 = Color3.fromRGB(220, 170, 255)
+promoBtn.TextScaled = true; promoBtn.Font = Enum.Font.GothamBold
+promoBtn.Text = "🎁  Promo Code"
+promoBtn.ZIndex = 5
 promoBtn.Parent = gui
-Instance.new("UICorner", promoBtn).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", promoBtn).CornerRadius = UDim.new(0, 8)
+local pbs = Instance.new("UIStroke", promoBtn)
+pbs.Color = Color3.fromRGB(160, 0, 220); pbs.Thickness = 1.5
 
--- Input panel (hidden by default)
+-- Input panel (hidden by default, higher ZIndex so it renders on top)
 local promoPanel = Instance.new("Frame")
-promoPanel.Size     = UDim2.new(0, 340, 0, 100)
-promoPanel.Position = UDim2.new(0, 16, 0, 130)
+promoPanel.Size     = UDim2.new(0, 340, 0, 108)
+promoPanel.Position = UDim2.new(0, 16, 0, 134)
+promoPanel.ZIndex   = 6
 promoPanel.BackgroundColor3 = Color3.fromRGB(12, 0, 22)
 promoPanel.BackgroundTransparency = 0.1
 promoPanel.Visible  = false
