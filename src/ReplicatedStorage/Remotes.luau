@@ -53,4 +53,10 @@ Remotes.InventoryUpdate  = get("RemoteEvent",    "InventoryUpdate")  -- (invento
 
 Remotes.CraftItem = get("RemoteFunction", "CraftItem")  -- (deptKey: string) → {ok: bool, message: string}
 
+Remotes.SendTrade      = get("RemoteEvent",    "SendTrade")      -- client→server: (targetUserId: number, itemId: string)
+Remotes.TradeRequest   = get("RemoteEvent",    "TradeRequest")   -- server→client: (fromUserId: number, fromName: string, itemId: string, itemName: string)
+Remotes.TradeResponse  = get("RemoteEvent",    "TradeResponse")  -- client→server: (senderUserId: number, accepted: bool)
+Remotes.TradeCancelled = get("RemoteEvent",    "TradeCancelled") -- server→client: (reason: string)
+Remotes.TradeComplete  = get("RemoteEvent",    "TradeComplete")  -- server→client: (itemId: string, otherName: string)
+
 return Remotes
