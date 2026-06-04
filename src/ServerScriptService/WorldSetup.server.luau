@@ -499,8 +499,8 @@ local function buildUpperFloor(plot, plotCF, fd)
     local hZcf    = -D/2 + hD/2   -- hole centre in cf() = -47+9 = -38 (stairwell side) ✓
 
     -- Main bulk of floor: entrance side → stops hD before stairwell wall
-    -- Centre at cf(0, T/2, +hD/2) = shifted toward entrance by hD/2
-    hp(m,"FlrMain",Vector3.new(W,T,D-hD), cf(0,T/2,+hD/2), fd.fc,STONE,true)
+    -- Centre at cf(0, T/2, hD/2) = shifted toward entrance by hD/2
+    hp(m,"FlrMain",Vector3.new(W,T,D-hD), cf(0,T/2,hD/2), fd.fc,STONE,true)
 
     -- Stairwell-edge floor: two pieces left/right of the hole
     local bL = math.max(0, W/2 + stairX - hW/2 - 0.5)   -- left piece width
@@ -516,12 +516,12 @@ local function buildUpperFloor(plot, plotCF, fd)
     -- NO stairwell-side wall — open toward stairwell so players can look down and climb up
     -- Entrance-side wall (toward map centre, dz=+D/2): solid with windows
     local winS = (W-20)/2
-    hp(m,"EntrL",  Vector3.new(winS,H,T),   cf(-(W/2-winS/2),H/2,+D/2-T/2), fd.wc,STONE,true)
-    hp(m,"EntrR",  Vector3.new(winS,H,T),   cf( (W/2-winS/2),H/2,+D/2-T/2), fd.wc,STONE,true)
-    hp(m,"EntrBot",Vector3.new(20,WIN_BASE,T),cf(0,WIN_BASE/2,+D/2-T/2),     fd.wc,STONE,true)
-    local wg=vp(m,"EntrWin",Vector3.new(20,WIN_H,T),cf(0,WIN_BASE+WIN_H/2,+D/2-T/2),fd.wc,STONE)
+    hp(m,"EntrL",  Vector3.new(winS,H,T),   cf(-(W/2-winS/2),H/2,D/2-T/2), fd.wc,STONE,true)
+    hp(m,"EntrR",  Vector3.new(winS,H,T),   cf( (W/2-winS/2),H/2,D/2-T/2), fd.wc,STONE,true)
+    hp(m,"EntrBot",Vector3.new(20,WIN_BASE,T),cf(0,WIN_BASE/2,D/2-T/2),     fd.wc,STONE,true)
+    local wg=vp(m,"EntrWin",Vector3.new(20,WIN_H,T),cf(0,WIN_BASE+WIN_H/2,D/2-T/2),fd.wc,STONE)
     wg.Transparency=0.45; wg.BrickColor=BrickColor.new(fd.wc)
-    hp(m,"EntrTop",Vector3.new(20,H-WIN_BASE-WIN_H,T),cf(0,(WIN_BASE+WIN_H+(H-WIN_BASE-WIN_H)/2),+D/2-T/2),fd.wc,STONE,true)
+    hp(m,"EntrTop",Vector3.new(20,H-WIN_BASE-WIN_H,T),cf(0,(WIN_BASE+WIN_H+(H-WIN_BASE-WIN_H)/2),D/2-T/2),fd.wc,STONE,true)
     -- Side walls (solid, dz range)
     hp(m,"LW",  Vector3.new(T,H,D), cf(-W/2+T/2,H/2,0), fd.wc,STONE,true)
     hp(m,"RW",  Vector3.new(T,H,D), cf( W/2-T/2,H/2,0), fd.wc,STONE,true)
@@ -771,7 +771,7 @@ local function buildUpperFloor(plot, plotCF, fd)
     for s=1,stepsPerFloor do
         local t     = (s-1) / math.max(stepsPerFloor-1, 1)  -- 0→1
         local stepY = stairBottomY + s*1.4 - 0.7
-        -- Steps go from stairwell wall (dz=-D/2=-47) to just inside hole (dz=hZcf+hD/2=-29)
+        -- Steps go from stairwell wall (dz=-D/2=-47) to just inside hole (dz=hZcfhD/2=-29)
         -- That's 18 studs of horizontal travel over stepsPerFloor steps
         local stepDz = -D/2 + t * (hZcf + D/2 + hD/2)  -- from -47 to -29 in dz
         hp(sm,"S"..s, Vector3.new(6,0.4,1.8),
@@ -877,7 +877,19 @@ local function buildSpawn()
     boardFrame.Material=Enum.Material.SmoothPlastic; boardFrame.Parent=workspace
 end
 
--- ── Run ────────────────────────────────────────────────────────────────────
+-- ── Run (with error catching so failures are visible in output) ────────────
 
-buildLighting(); buildTerrain(); buildSpawn(); buildPlots()
-print("[WorldSetup] T-shaped multi-room lab built")
+local function runSafe(name, fn)
+    local ok, err = pcall(fn)
+    if not ok then
+        warn("[WorldSetup] ERROR in " .. name .. ": " .. tostring(err))
+    else
+        print("[WorldSetup] " .. name .. " OK")
+    end
+end
+
+runSafe("buildLighting", buildLighting)
+runSafe("buildTerrain",  buildTerrain)
+runSafe("buildSpawn",    buildSpawn)
+runSafe("buildPlots",    buildPlots)
+print("[WorldSetup] Done")
