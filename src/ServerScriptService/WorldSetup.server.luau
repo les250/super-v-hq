@@ -421,11 +421,12 @@ local CASTLE_FLOORS = {
 }
 
 local function buildUpperFloor(plot, plotCF, fd)
-    local fIdx  = fd.floor - 1
-    local yBase = H * (fd.floor - 1)   -- 14, 28, 42, 56, 70
-    local W, D  = 22, 22
-    local lx    = STAIR_X[fIdx]
-    local lz    = STAIR_Z
+    local fIdx   = fd.floor - 1
+    local yBase  = H * (fd.floor - 1)  -- 14, 28, 42, 56, 70
+    local W, D   = 110, 60             -- WIDE like the lab (was 22×22 tiny cube)
+    local lx     = 0                   -- all floors centred on the building X axis
+    local lz     = -70                 -- centred above the lab/stairwell area
+    local stairX = STAIR_X[fIdx]       -- drop pad / staircase still spread across X
 
     local function cf(dx,dy,dz) return plotCF*CFrame.new(lx+dx,yBase+dy,lz+dz) end
 
@@ -444,28 +445,28 @@ local function buildUpperFloor(plot, plotCF, fd)
         hp(m,"HSF"..i, Vector3.new(W-2,0.3,T*0.5),  cf(0,3+i*3.5,-D/2+0.4),    fd.wc, STONE, false)
     end
 
-    -- ── Battlements (crenellations) on top of each wall ───────────────────
-    local merlonW, merlonH = 3, 3
+    -- ── Battlements scaled to wide walls ─────────────────────────────────
+    local merlonW, merlonH = 4, 3
     local merlonT = T + 0.5
-    -- Front and back walls: 4 merlons each
-    for k=0,3 do
-        local bx = (k-1.5) * (W/4)
-        hp(m,"MFr"..k, Vector3.new(merlonW,merlonH,merlonT), cf(bx,H+merlonH/2,-D/2),  fd.wc,STONE,true)
-        hp(m,"MBk"..k, Vector3.new(merlonW,merlonH,merlonT), cf(bx,H+merlonH/2, D/2),  fd.wc,STONE,true)
+    -- Front and back: 10 merlons across 110-stud wall
+    for k=0,9 do
+        local bx = (k-4.5)*(W/10)
+        hp(m,"MFr"..k, Vector3.new(merlonW,merlonH,merlonT), cf(bx,H+merlonH/2,-D/2), fd.wc,STONE,true)
+        hp(m,"MBk"..k, Vector3.new(merlonW,merlonH,merlonT), cf(bx,H+merlonH/2, D/2), fd.wc,STONE,true)
     end
-    -- Left and right walls: 4 merlons each
-    for k=0,3 do
-        local bz = (k-1.5) * (D/4)
+    -- Left and right: 6 merlons across 60-stud wall
+    for k=0,5 do
+        local bz = (k-2.5)*(D/6)
         hp(m,"MLf"..k, Vector3.new(merlonT,merlonH,merlonW), cf(-W/2,H+merlonH/2,bz), fd.wc,STONE,true)
         hp(m,"MRt"..k, Vector3.new(merlonT,merlonH,merlonW), cf( W/2,H+merlonH/2,bz), fd.wc,STONE,true)
     end
-    -- Corner towers (taller pillars at each corner for castle silhouette)
+    -- Corner towers
     for _,cx in ipairs({-W/2, W/2}) do for _,cz in ipairs({-D/2, D/2}) do
-        hp(m,"Tower", Vector3.new(3,H+6,3), cf(cx,H/2+3,cz), fd.wc, STONE, true)
+        hp(m,"Tower"..cx..cz, Vector3.new(5,H+8,5), cf(cx,H/2+4,cz), fd.wc, STONE, true)
     end end
 
-    -- Torch sconces (neon orange on walls)
-    for _,sx in ipairs({-W/2+2, W/2-2}) do
+    -- Torch sconces spread along the long walls (every 20 studs)
+    for _,sx in ipairs({-W/2+3, -W/4, 0, W/4, W/2-3}) do
         hp(m,"Torch"..sx, Vector3.new(0.5,2,0.5), cf(sx,7,0),   "Dark grey",STONE,true)
         hp(m,"TFlame"..sx,Vector3.new(0.8,1,0.8), cf(sx,8.3,0), "Bright orange",NEON,false)
     end
@@ -588,23 +589,24 @@ local function buildUpperFloor(plot, plotCF, fd)
         hp(m,"Flag",     Vector3.new(4,2.5,0.2),        cf(W/2-2+2,H+7.5,D/2-2),"Bright red",nil,false)
     end
 
-    -- Drop pad inside stairwell at ground level
+    -- Drop pad: in stairwell at ground, one per floor at different X
     local pad = Instance.new("Part"); pad.Name="DropPad_"..fd.id
-    pad.Size=Vector3.new(5,0.3,5)
-    pad.CFrame=plotCF*CFrame.new(lx,0.25,STAIR_Z)
+    pad.Size=Vector3.new(6,0.3,6)
+    pad.CFrame=plotCF*CFrame.new(stairX, 0.25, STAIR_Z)
     pad.Anchored=true; pad.BrickColor=BrickColor.new("Bright green"); pad.Material=NEON
     pad.Parent=plot
 
-    -- Castle stone staircase (hidden until bought)
+    -- Castle stone staircase from ground up to this floor
     local sm = Instance.new("Model"); sm.Name="Stair_"..fd.id; sm.Parent=plot
     local steps = math.ceil(H/1.6)
     for s=1,steps do
         hp(sm,"S"..s, Vector3.new(4,0.5,1.8),
-            plotCF*CFrame.new(lx, yBase+s*1.6-0.8, STAIR_Z-1+s*1.1),
+            plotCF*CFrame.new(stairX, yBase+s*1.6-0.8, STAIR_Z-1+s*1.1),
             "Dark stone grey", STONE, true)
     end
-    hp(sm,"Land",Vector3.new(4,0.5,4),
-        plotCF*CFrame.new(lx,yBase+H-0.25,STAIR_Z),
+    -- Landing connects staircase top to the floor room interior
+    hp(sm,"Land",Vector3.new(6,0.5,8),
+        plotCF*CFrame.new(stairX, yBase+H-0.25, STAIR_Z+2),
         "Dark stone grey",STONE,true)
 end
 
