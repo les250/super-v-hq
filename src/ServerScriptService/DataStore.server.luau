@@ -24,6 +24,7 @@ local DEFAULT_DATA = {
     lastRaidedAt   = 0,
     inventorySlots = Config.STARTING_SLOTS,
     inventory      = {},
+    timePlayed     = 0,   -- seconds played total
 }
 
 local function deepCopy(t)
@@ -83,6 +84,19 @@ end)
 Players.PlayerRemoving:Connect(function(player)
     saveData(player)
     cache[player.UserId] = nil
+end)
+
+-- Time-played ticker (adds 60s every minute per online player)
+task.spawn(function()
+    while true do
+        task.wait(60)
+        for _, player in ipairs(Players:GetPlayers()) do
+            local data = cache[player.UserId]
+            if data then
+                data.timePlayed = (data.timePlayed or 0) + 60
+            end
+        end
+    end
 end)
 
 -- Periodic auto-save

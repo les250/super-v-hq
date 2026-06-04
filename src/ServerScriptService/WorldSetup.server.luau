@@ -3,7 +3,7 @@ local Lighting = game:GetService("Lighting")
 local RoomData  = require(game.ReplicatedStorage.RoomData)
 
 local NUM_PLOTS = 6
-local RADIUS    = 320
+local RADIUS    = 550   -- spread plots near map edge, ~90 studs from 700-unit floor border
 local H         = 14   -- floor height
 local T         = 1.2  -- wall thickness
 local DOOR_W    = 10   -- door gap width
