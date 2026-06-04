@@ -403,214 +403,315 @@ local function buildLabFloor(plot, plotCF)
 end
 
 -- ── Castle tower upper floors ─────────────────────────────────────────────
--- Each floor is a castle room stacked above the lab.
--- All parts use hp() — invisible until the floor is purchased.
+-- Each floor matches the lab footprint exactly (W=116, D=94) and stacks above it.
+-- lz=-47 centres the floors over the lab (lab spans Z=0 to Z=-94, centre=-47).
+-- The back wall is at lz-D/2 = -94 = STAIR_Z, so staircases emerge through a
+-- door gap directly into the back of each floor.
+-- All parts use hp() — invisible/non-collidable until the floor is purchased.
 
-local STAIR_X = {-44, -22, 0, 22, 44}
-local STAIR_Z = -94
-local STONE    = Enum.Material.SmoothPlastic  -- use Concrete or SmoothPlastic for stone feel
+local STAIR_X = {-44, -22, 0, 22, 44}   -- X positions of the 5 staircases
+local STAIR_Z = -94                       -- back of building = stairwell Z
+local FLR_LZ  = -47                       -- floor centre Z (= lab centre)
+local FLR_W   = 116                       -- matches lab width
+local FLR_D   = 94                        -- matches lab depth
+local STONE    = Enum.Material.SmoothPlastic
 local NEON     = Enum.Material.Neon
 
--- Shared castle config per floor
 local CASTLE_FLOORS = {
-    { id="armory",         name="The Dungeon",      wc="Dark stone grey", fc="Dark stone grey", light="Bright orange",   floor=2 },
-    { id="minion_barracks",name="Castle Barracks",  wc="Dark stone grey", fc="Reddish brown",   light="Bright orange",   floor=3 },
-    { id="war_room",       name="Throne Room",      wc="Really black",    fc="Dark grey",        light="Bright yellow",   floor=4 },
-    { id="vault",          name="The Treasury",     wc="Dark grey",       fc="Gold",             light="Bright yellow",   floor=5 },
-    { id="escape_pod_bay", name="Castle Battlements",wc="Medium stone grey",fc="Light grey",     light="Cyan",            floor=6 },
+    { id="armory",         floor=2, wc="Dark stone grey", fc="Really black",   light="Bright orange"  },
+    { id="minion_barracks",floor=3, wc="Reddish brown",   fc="Reddish brown",  light="Bright yellow"  },
+    { id="war_room",       floor=4, wc="Really black",    fc="Dark grey",      light="Bright violet"  },
+    { id="vault",          floor=5, wc="Dark grey",       fc="Gold",           light="Bright yellow"  },
+    { id="escape_pod_bay", floor=6, wc="Medium stone grey",fc="Light grey",    light="Cyan"           },
 }
 
 local function buildUpperFloor(plot, plotCF, fd)
     local fIdx   = fd.floor - 1
-    local yBase  = H * (fd.floor - 1)  -- 14, 28, 42, 56, 70
-    local W, D   = 110, 60             -- WIDE like the lab (was 22×22 tiny cube)
-    local lx     = 0                   -- all floors centred on the building X axis
-    local lz     = -70                 -- centred above the lab/stairwell area
-    local stairX = STAIR_X[fIdx]       -- drop pad / staircase still spread across X
+    local yBase  = H * (fd.floor - 1)   -- 14, 28, 42, 56, 70
+    local W, D   = FLR_W, FLR_D         -- 116 × 94 — same as lab
+    local lx, lz = 0, FLR_LZ            -- centred above lab
+    local stairX = STAIR_X[fIdx]        -- staircase X per floor
 
     local function cf(dx,dy,dz) return plotCF*CFrame.new(lx+dx,yBase+dy,lz+dz) end
 
     local m = Instance.new("Model"); m.Name="Room_"..fd.id; m.Parent=plot
 
-    -- ── Stone walls + floor ────────────────────────────────────────────────
-    hp(m,"Floor",  Vector3.new(W,T,D),       cf(0,T/2,0),          fd.fc,  STONE, true)
-    hp(m,"BkW",    Vector3.new(W,H,T),       cf(0,H/2, D/2-T/2),   fd.wc,  STONE, true)
-    hp(m,"FrW",    Vector3.new(W,H,T),       cf(0,H/2,-D/2+T/2),   fd.wc,  STONE, true)
-    hp(m,"LW",     Vector3.new(T,H,D),       cf(-W/2+T/2,H/2,0),   fd.wc,  STONE, true)
-    hp(m,"RW",     Vector3.new(T,H,D),       cf( W/2-T/2,H/2,0),   fd.wc,  STONE, true)
+    -- ── Structure ─────────────────────────────────────────────────────────
+    hp(m,"Floor", Vector3.new(W,T,D),   cf(0,T/2,0),           fd.fc, STONE, true)
 
-    -- Stone texture strips on walls (give carved block look)
-    for i=0,2 do
-        hp(m,"HSB"..i, Vector3.new(W-2,0.3,T*0.5),  cf(0,3+i*3.5, D/2-0.4),    fd.wc, STONE, false)
-        hp(m,"HSF"..i, Vector3.new(W-2,0.3,T*0.5),  cf(0,3+i*3.5,-D/2+0.4),    fd.wc, STONE, false)
+    -- Front wall with wide entrance (30 wide, faces toward map centre)
+    local fw=(W-30)/2
+    hp(m,"FrL",  Vector3.new(fw,H,T),   cf(-(W/2-fw/2),H/2,-D/2+T/2), fd.wc,STONE,true)
+    hp(m,"FrR",  Vector3.new(fw,H,T),   cf( (W/2-fw/2),H/2,-D/2+T/2), fd.wc,STONE,true)
+    hp(m,"FrTop",Vector3.new(30,4,T),   cf(0,H-2,-D/2+T/2),            fd.wc,STONE,true)
+
+    -- Back wall with STAIRCASE DOOR GAPS (one per stairX, 8 wide)
+    -- Left and right sections around the 5 staircase openings
+    local gapW = 10
+    local prevX = -W/2
+    local stairPositions = {-44,-22,0,22,44}
+    table.sort(stairPositions)
+    for _, sx in ipairs(stairPositions) do
+        local segW = (sx - gapW/2) - prevX
+        if segW > 0.5 then
+            hp(m,"BkSeg"..sx, Vector3.new(segW,H,T), cf(prevX+segW/2,H/2,D/2-T/2), fd.wc,STONE,true)
+        end
+        prevX = sx + gapW/2
     end
+    local lastSeg = W/2 - prevX
+    if lastSeg > 0.5 then
+        hp(m,"BkSegLast",Vector3.new(lastSeg,H,T), cf(prevX+lastSeg/2,H/2,D/2-T/2), fd.wc,STONE,true)
+    end
+    -- Top strip above staircase gaps
+    hp(m,"BkTop",Vector3.new(W,4,T), cf(0,H-2,D/2-T/2), fd.wc,STONE,true)
 
-    -- ── Battlements scaled to wide walls ─────────────────────────────────
-    local merlonW, merlonH = 4, 3
-    local merlonT = T + 0.5
-    -- Front and back: 10 merlons across 110-stud wall
+    -- Side walls (solid)
+    hp(m,"LW",  Vector3.new(T,H,D), cf(-W/2+T/2,H/2,0), fd.wc,STONE,true)
+    hp(m,"RW",  Vector3.new(T,H,D), cf( W/2-T/2,H/2,0), fd.wc,STONE,true)
+
+    -- Ceiling light strip
+    hp(m,"CeilLight",Vector3.new(W-2,0.3,D-2), cf(0,H-0.8,0), fd.light,NEON,false)
+
+    -- ── Battlements (10 on front/back, 8 on sides) ────────────────────────
+    local mW,mH,mT = 4,3,T+0.5
     for k=0,9 do
-        local bx = (k-4.5)*(W/10)
-        hp(m,"MFr"..k, Vector3.new(merlonW,merlonH,merlonT), cf(bx,H+merlonH/2,-D/2), fd.wc,STONE,true)
-        hp(m,"MBk"..k, Vector3.new(merlonW,merlonH,merlonT), cf(bx,H+merlonH/2, D/2), fd.wc,STONE,true)
+        local bx=(k-4.5)*(W/10)
+        hp(m,"MFr"..k,Vector3.new(mW,mH,mT),cf(bx,H+mH/2,-D/2),fd.wc,STONE,true)
+        hp(m,"MBk"..k,Vector3.new(mW,mH,mT),cf(bx,H+mH/2, D/2),fd.wc,STONE,true)
     end
-    -- Left and right: 6 merlons across 60-stud wall
-    for k=0,5 do
-        local bz = (k-2.5)*(D/6)
-        hp(m,"MLf"..k, Vector3.new(merlonT,merlonH,merlonW), cf(-W/2,H+merlonH/2,bz), fd.wc,STONE,true)
-        hp(m,"MRt"..k, Vector3.new(merlonT,merlonH,merlonW), cf( W/2,H+merlonH/2,bz), fd.wc,STONE,true)
+    for k=0,7 do
+        local bz=(k-3.5)*(D/8)
+        hp(m,"MLf"..k,Vector3.new(mT,mH,mW),cf(-W/2,H+mH/2,bz),fd.wc,STONE,true)
+        hp(m,"MRt"..k,Vector3.new(mT,mH,mW),cf( W/2,H+mH/2,bz),fd.wc,STONE,true)
     end
     -- Corner towers
-    for _,cx in ipairs({-W/2, W/2}) do for _,cz in ipairs({-D/2, D/2}) do
-        hp(m,"Tower"..cx..cz, Vector3.new(5,H+8,5), cf(cx,H/2+4,cz), fd.wc, STONE, true)
+    for _,cx in ipairs({-W/2,W/2}) do for _,cz in ipairs({-D/2,D/2}) do
+        hp(m,"Twr"..cx..cz,Vector3.new(6,H+10,6),cf(cx,H/2+5,cz),fd.wc,STONE,true)
     end end
 
-    -- Torch sconces spread along the long walls (every 20 studs)
-    for _,sx in ipairs({-W/2+3, -W/4, 0, W/4, W/2-3}) do
-        hp(m,"Torch"..sx, Vector3.new(0.5,2,0.5), cf(sx,7,0),   "Dark grey",STONE,true)
-        hp(m,"TFlame"..sx,Vector3.new(0.8,1,0.8), cf(sx,8.3,0), "Bright orange",NEON,false)
+    -- Wall torch sconces (every 18 studs on the long side walls)
+    local torchCol = "Bright orange"
+    for _,sx2 in ipairs({-50,-32,-14,0,14,32,50}) do
+        hp(m,"TW"..sx2,  Vector3.new(0.5,2,0.5),  cf(sx2,7,-D/2+2), "Dark grey",STONE,true)
+        hp(m,"TF"..sx2,  Vector3.new(0.9,1.2,0.9),cf(sx2,8.5,-D/2+2),torchCol,NEON,false)
+        hp(m,"TW2"..sx2, Vector3.new(0.5,2,0.5),  cf(sx2,7, D/2-2), "Dark grey",STONE,true)
+        hp(m,"TF2"..sx2, Vector3.new(0.9,1.2,0.9),cf(sx2,8.5,D/2-2), torchCol,NEON,false)
     end
 
-    -- Ambient neon strip on ceiling underside
-    hp(m,"Ceil", Vector3.new(W-2,0.3,D-2), cf(0,H-1,0), fd.light, NEON, false)
+    -- ── Distinct themed interior per floor ────────────────────────────────
 
-    -- ── Castle-themed room interiors ───────────────────────────────────────
     if fd.id == "armory" then
-        -- The Dungeon: iron bars, weapon racks, chains, skull
-        hp(m,"IronGate",  Vector3.new(W-4,8,T),      cf(0,5,-D/2+2),       "Dark grey",STONE,true)
-        for k=-2,2 do
-            hp(m,"Bar"..k, Vector3.new(0.4,8,T*0.5), cf(k*3,5,-D/2+2.2),  "Really black",STONE,true)
+        -- ═══ THE DUNGEON ═══
+        -- Damp dark dungeon. Iron bars, chains, weapon racks, torture device, moat.
+        -- Moat / water trench across the centre
+        hp(m,"Moat",    Vector3.new(W-4,0.4,6),     cf(0,1.3,0),          "Really blue",STONE,true)
+        hp(m,"MoatWater",Vector3.new(W-5,0.2,5),    cf(0,1.4,0),          "Bright blue",NEON,false)
+        -- Drawbridge over moat
+        hp(m,"Bridge",  Vector3.new(8,0.5,6),        cf(0,1.75,0),         "Reddish brown",nil,true)
+        -- Multiple weapon rack columns across width
+        for _,rx in ipairs({-45,-25,-5,15,35}) do
+            hp(m,"Rack"..rx,    Vector3.new(T,9,7),   cf(rx,5.5,-D/2+2),  "Dark grey",Enum.Material.Metal,true)
+            for i=-2,2 do
+                hp(m,"WRSword"..rx..i,Vector3.new(0.4,6,0.4),cf(rx,6,i*2-D/2+2),"Medium stone grey",nil,false)
+            end
         end
-        hp(m,"WeapRack",  Vector3.new(T,7,8),         cf(-W/2+1.5,4.5,0),  "Dark grey",Enum.Material.Metal,true)
-        hp(m,"WeapRack2", Vector3.new(T,7,8),         cf( W/2-1.5,4.5,0),  "Dark grey",Enum.Material.Metal,true)
-        for _,wz in ipairs({-3,0,3}) do
-            hp(m,"Sword"..wz,Vector3.new(0.3,5,0.3), cf(-W/2+1.5,5.5,wz), "Medium stone grey",nil,false)
+        -- Iron bar cells (3 cells across the back)
+        for cell=0,2 do
+            local cx4=(cell-1)*30
+            for bar=0,5 do
+                hp(m,"Cell"..cell.."Bar"..bar,Vector3.new(0.4,H-2,T),cf(cx4+bar*2-4,H/2,D/2-2),"Dark grey",STONE,true)
+            end
+            hp(m,"CellTop"..cell,Vector3.new(12,T,T),cf(cx4,H-T/2,D/2-2),"Dark grey",STONE,true)
         end
-        hp(m,"Chain1",    Vector3.new(0.3,6,0.3),     cf(-4,8,4),           "Dark grey",nil,false)
-        hp(m,"Chain2",    Vector3.new(0.3,4,0.3),     cf( 4,7,4),           "Dark grey",nil,false)
-        hp(m,"Crate1",    Vector3.new(4,3,4),          cf(4,2.5,-3),         "Dark stone grey",STONE,true)
-        hp(m,"Crate2",    Vector3.new(3,3,3),          cf(4,5,0),            "Dark stone grey",STONE,true)
-        hp(m,"Floor2",    Vector3.new(W-2,0.2,D-2),   cf(0,0.9,0),          "Really black",STONE,true)
+        -- Chains hanging from ceiling
+        for _,cx5 in ipairs({-40,-20,0,20,40}) do
+            hp(m,"Chain"..cx5,Vector3.new(0.4,8,0.4),cf(cx5,8,-10),"Dark grey",nil,false)
+        end
+        -- Torture rack in corner
+        hp(m,"RackBase",Vector3.new(5,0.5,3),cf(-50,1.75,20),"Dark stone grey",STONE,true)
+        hp(m,"RackFrame",Vector3.new(5,5,0.5),cf(-50,4,20),  "Reddish brown",nil,true)
+        -- Floor: black stone tiles
+        hp(m,"DungeonFloor",Vector3.new(W-2,0.2,D-2),cf(0,0.9,0),"Really black",STONE,true)
 
     elseif fd.id == "minion_barracks" then
-        -- Castle Barracks: stone bunk beds, armour stands, banner, captain platform
-        for b=0,1 do
-            local bz = b==0 and 5 or -5
-            hp(m,"BedFrame"..b,Vector3.new(6,0.5,3),   cf(-5,2,bz),         "Dark stone grey",STONE,true)
-            hp(m,"BedTop"..b,  Vector3.new(6,0.5,3),   cf(-5,5.5,bz),       "Dark stone grey",STONE,true)
-            hp(m,"BedPost"..b.."1",Vector3.new(0.5,5.5,0.5),cf(-7.5,3.25,bz-1.2),"Dark stone grey",STONE,true)
-            hp(m,"BedPost"..b.."2",Vector3.new(0.5,5.5,0.5),cf(-2.5,3.25,bz-1.2),"Dark stone grey",STONE,true)
-            hp(m,"Mattress"..b,Vector3.new(5.5,0.4,2.5),cf(-5,2.4,bz),      "Reddish brown",nil,false)
+        -- ═══ THE GREAT HALL (Feasting Hall) ═══
+        -- Warm communal feast hall. Long tables, fireplace, trophy wall, barrel storage.
+        -- Warm wooden floor overlay
+        hp(m,"WoodFloor",Vector3.new(W-2,0.2,D-2),cf(0,0.9,0),"Reddish brown",Enum.Material.Wood,true)
+        -- Grand fireplace at back centre
+        hp(m,"FireMant",  Vector3.new(14,10,T),     cf(0,6,D/2-1.5),  "Dark stone grey",STONE,true)
+        hp(m,"FireArch",  Vector3.new(10,6,T+0.2),  cf(0,4,D/2-1.3),  "Really black",STONE,true)
+        hp(m,"FireFlame", Vector3.new(7,4,0.5),     cf(0,3.5,D/2-1.2),"Bright orange",NEON,false)
+        hp(m,"FireBase",  Vector3.new(12,1,3),       cf(0,1.5,D/2-2),  "Dark stone grey",STONE,true)
+        -- Long feast tables (4 rows)
+        for t=0,3 do
+            local tz=(t-1.5)*16
+            hp(m,"Table"..t,  Vector3.new(60,1,5),  cf(0,3,tz),       "Reddish brown",Enum.Material.Wood,true)
+            hp(m,"Bench"..t.."A",Vector3.new(58,0.5,2),cf(0,2,tz-3.5),"Dark grey",Enum.Material.Wood,true)
+            hp(m,"Bench"..t.."B",Vector3.new(58,0.5,2),cf(0,2,tz+3.5),"Dark grey",Enum.Material.Wood,true)
         end
-        -- Captain's raised platform + throne
-        hp(m,"Platform",  Vector3.new(7,0.8,5),        cf(5,1.8,0),          "Dark stone grey",STONE,true)
-        hp(m,"Throne",    Vector3.new(2.5,4,2),         cf(5,4,0),            "Really black",STONE,true)
-        hp(m,"ThroneBack",Vector3.new(2.5,3,0.5),       cf(5,5.5,-0.8),       "Really black",STONE,true)
-        -- Banner on back wall
-        hp(m,"Banner",    Vector3.new(4,7,0.3),          cf(0,7,D/2-1.5),     "Bright red",nil,false)
-        hp(m,"BannerSymb",Vector3.new(2,3,0.2),          cf(0,8,D/2-1.3),     "Bright yellow",nil,false)
-        hp(m,"Locker1",   Vector3.new(2,5,1.5),          cf(-8,3.5,7),         "Dark stone grey",STONE,true)
-        hp(m,"Locker2",   Vector3.new(2,5,1.5),          cf(-8,3.5,4),         "Dark stone grey",STONE,true)
+        -- Trophy heads / mounted shields on walls
+        for _,tx2 in ipairs({-50,-30,-10,10,30,50}) do
+            hp(m,"Shield"..tx2,Vector3.new(3,3.5,0.4),cf(tx2,9,-D/2+1),"Dark grey",nil,false)
+            hp(m,"ShieldGlow"..tx2,Vector3.new(2,2,0.2),cf(tx2,9,-D/2+1.1),"Bright red",NEON,false)
+        end
+        -- Mead barrels along the sides
+        for b=0,4 do
+            local bz2=(b-2)*14
+            hp(m,"BarrelL"..b,Vector3.new(3,4,3),cf(-55,3,bz2),"Reddish brown",nil,true)
+            hp(m,"BarrelR"..b,Vector3.new(3,4,3),cf( 55,3,bz2),"Reddish brown",nil,true)
+        end
+        -- Chandeliers (3 across the hall)
+        for _,cx6 in ipairs({-30,0,30}) do
+            hp(m,"Chan"..cx6,    Vector3.new(8,0.5,8),   cf(cx6,H-2,0),   "Bright yellow",NEON,false)
+            hp(m,"ChanChain"..cx6,Vector3.new(0.4,4,0.4),cf(cx6,H-5.5,0),"Dark grey",nil,false)
+        end
+        -- Overriding torch color for warmth
+        torchCol = "Bright yellow"
 
     elseif fd.id == "war_room" then
-        -- Throne Room: grand throne, columns, red carpet, chandelier, banners
-        -- Red carpet
-        hp(m,"Carpet",    Vector3.new(4,0.2,D-2),       cf(0,1.1,0),          "Bright red",nil,false)
-        -- Throne on raised dais
-        hp(m,"Dais",      Vector3.new(8,1.2,6),          cf(0,1.6,D/2-5),      "Dark stone grey",STONE,true)
-        hp(m,"ThroneBase",Vector3.new(4,4,3),            cf(0,4.6,D/2-5),      "Really black",STONE,true)
-        hp(m,"ThroneBack",Vector3.new(4,5,0.6),          cf(0,7.1,D/2-6.1),    "Really black",STONE,true)
-        hp(m,"ThroneCrown",Vector3.new(5,1.5,0.6),       cf(0,10.4,D/2-6.1),   "Bright yellow",NEON,false)
-        -- Four stone columns
-        for _,cx2 in ipairs({-7,7}) do for _,cz2 in ipairs({-5,5}) do
-            hp(m,"Col",   Vector3.new(2,H,2), cf(cx2,H/2,cz2), "Medium stone grey",STONE,true)
-            hp(m,"ColCap",Vector3.new(3,1,3), cf(cx2,H+0.5,cz2),"Dark stone grey",STONE,true)
-        end end
-        -- War table (strategy map)
-        hp(m,"WarTable",  Vector3.new(9,0.8,6),          cf(0,3,-4),           "Reddish brown",nil,true)
-        hp(m,"MapTop",    Vector3.new(8.5,0.2,5.5),      cf(0,3.5,-4),         "Dark grey",nil,false)
-        -- Chandelier
-        hp(m,"Chandelier",Vector3.new(5,0.5,5),          cf(0,H-2,0),          "Bright yellow",NEON,false)
-        hp(m,"ChanArm1",  Vector3.new(5,0.3,0.3),        cf(0,H-2.5,0),        "Dark grey",nil,false)
-        hp(m,"ChanArm2",  Vector3.new(0.3,0.3,5),        cf(0,H-2.5,0),        "Dark grey",nil,false)
-        -- Side banners
-        for _,bx2 in ipairs({-W/2+1, W/2-1}) do
-            hp(m,"Banner"..bx2,Vector3.new(0.3,7,3),    cf(bx2,8,2),          "Bright red",nil,false)
+        -- ═══ THE THRONE ROOM ═══
+        -- Grand royal chamber. Columns, throne, red carpet, war table, royal banners.
+        -- Marble floor overlay
+        hp(m,"MarbleFloor",Vector3.new(W-2,0.2,D-2),cf(0,0.9,0),"White",Enum.Material.Marble,true)
+        -- Red carpet runner
+        hp(m,"Carpet",     Vector3.new(6,0.2,D-4),   cf(0,1.1,0),        "Bright red",nil,false)
+        -- Grand throne at back (centre)
+        hp(m,"Dais",       Vector3.new(16,1.5,10),    cf(0,1.75,D/2-7),   "Dark stone grey",STONE,true)
+        hp(m,"ThroneBase", Vector3.new(7,5,4),        cf(0,5.5,D/2-8),    "Really black",STONE,true)
+        hp(m,"ThroneBack", Vector3.new(7,7,0.8),      cf(0,8.5,D/2-9.8),  "Really black",STONE,true)
+        hp(m,"ThroneCrown",Vector3.new(8,2,0.8),      cf(0,13,D/2-9.8),   "Bright yellow",NEON,false)
+        hp(m,"ThroneGlow", Vector3.new(5,1,3),        cf(0,3.5,D/2-8),    "Bright violet",NEON,false)
+        -- 8 stone columns (4 per side) running down the hall
+        for _,cx7 in ipairs({-46,-30,-14,14,30,46}) do
+            hp(m,"Col"..cx7, Vector3.new(3,H,3),   cf(cx7,H/2,0),   "Medium stone grey",STONE,true)
+            hp(m,"ColCap"..cx7,Vector3.new(4,1.5,4),cf(cx7,H+0.5,0),"Dark stone grey",STONE,true)
+            hp(m,"ColBase"..cx7,Vector3.new(4,1,4), cf(cx7,0.5,0),  "Dark stone grey",STONE,true)
         end
+        -- War strategy table
+        hp(m,"WarTable",   Vector3.new(20,1,10),      cf(0,3.5,-15),      "Reddish brown",Enum.Material.Wood,true)
+        hp(m,"MapSurface", Vector3.new(19,0.3,9),     cf(0,4.2,-15),      "Dark grey",nil,false)
+        -- Royal banners (every 20 studs along sides)
+        for _,bx3 in ipairs({-48,-28,-8,8,28,48}) do
+            hp(m,"BanL"..bx3,Vector3.new(0.4,9,4),cf(bx3,8,0),"Bright red",nil,false)
+            hp(m,"BanSymL"..bx3,Vector3.new(0.3,4,2),cf(bx3,8,0),"Bright yellow",NEON,false)
+        end
+        -- Chandelier array
+        for _,cx8 in ipairs({-35,0,35}) do
+            hp(m,"RChan"..cx8,     Vector3.new(10,0.6,10), cf(cx8,H-1.5,0),"Bright yellow",NEON,false)
+            hp(m,"RChanChain"..cx8,Vector3.new(0.5,5,0.5), cf(cx8,H-5,0),  "Dark grey",nil,false)
+        end
+        torchCol = "Bright violet"
 
     elseif fd.id == "vault" then
-        -- The Treasury: gold bars, treasure chests, locked portcullis gate, coin piles
-        -- Gold bar stacks
-        for row=0,3 do for col=-2,2 do
-            hp(m,"GBar"..row..col,Vector3.new(1.5,0.8,2.5),cf(col*2,1.5+row*0.9,4+row*0.3),"Bright yellow",nil,true)
-        end end
-        -- Treasure chests
-        for k=0,2 do
-            local cx3 = (k-1)*5
-            hp(m,"Chest"..k,     Vector3.new(3,2,2),    cf(cx3,2,-6),         "Reddish brown",nil,true)
-            hp(m,"ChestLid"..k,  Vector3.new(3,1,2),    cf(cx3,3.5,-6),       "Dark orange",nil,true)
-            hp(m,"ChestGold"..k, Vector3.new(2.5,0.5,1.5),cf(cx3,2.5,-6),     "Bright yellow",NEON,false)
+        -- ═══ THE TREASURY ═══
+        -- Glittering treasure vault. Gold everywhere, chests, portcullis, coin mountains.
+        -- Gold tile floor
+        hp(m,"GoldFloor",Vector3.new(W-2,0.2,D-2), cf(0,0.9,0),"Bright yellow",STONE,true)
+        -- Gold bar walls (stacks lining the sides)
+        for row=0,5 do
+            for _,sx3 in ipairs({-54,-50,-46,46,50,54}) do
+                hp(m,"GBar"..row..sx3,Vector3.new(3,1,4),cf(sx3,1.5+row*1.1,0),"Bright yellow",nil,true)
+            end
         end
-        -- Portcullis gate
-        hp(m,"Gate",     Vector3.new(W-4,10,T),          cf(0,6,-D/2+2),       "Dark grey",STONE,true)
-        for k=-3,3 do
-            hp(m,"GBar"..k, Vector3.new(0.5,10,T*0.5),  cf(k*2.5,6,-D/2+2.2),"Really black",nil,true)
+        -- Central coin mountain
+        for ring=0,4 do
+            hp(m,"Coins"..ring,Vector3.new(20-ring*4,ring*0.8+1,20-ring*4),cf(0,ring*0.9+1,10),"Bright yellow",nil,true)
         end
-        hp(m,"GBarH",    Vector3.new(W-4,0.5,T*0.5),    cf(0,4,-D/2+2.2),     "Really black",nil,false)
-        -- Coin piles
-        hp(m,"Coins1",   Vector3.new(4,1,4),             cf(-6,1.5,-2),        "Bright yellow",nil,true)
-        hp(m,"Coins2",   Vector3.new(3,0.8,3),           cf(-6,2.2,-2),        "Gold",nil,false)
-        -- Vault door at back
-        hp(m,"VDoor",    Vector3.new(7,9,T),             cf(0,5.5,D/2-1.5),    "Dark grey",Enum.Material.Metal,true)
-        hp(m,"VRing",    Vector3.new(5,5,0.4),           cf(0,5.5,D/2-1.2),    "Medium stone grey",nil,false)
-        hp(m,"VHandle",  Vector3.new(0.5,3,0.5),         cf(2,5.5,D/2-1),      "Gold",NEON,false)
+        -- Treasure chests scattered across floor
+        for k=0,7 do
+            local cx9=(k-3.5)*13
+            hp(m,"Chest"..k,    Vector3.new(4,2.5,3),   cf(cx9,2.25,-15),  "Reddish brown",nil,true)
+            hp(m,"ChestLid"..k, Vector3.new(4,1.5,3),   cf(cx9,3.75,-15),  "Dark orange",nil,true)
+            hp(m,"ChestGlow"..k,Vector3.new(3,0.5,2),   cf(cx9,2.6,-15),   "Bright yellow",NEON,false)
+        end
+        -- Portcullis gate at entrance area
+        local gateW = 30
+        hp(m,"Gate",    Vector3.new(gateW,H,T),          cf(0,H/2,-D/2+4),  "Dark grey",STONE,true)
+        for k=0,9 do
+            hp(m,"GBar"..k,Vector3.new(0.5,H,T*0.5),    cf((k-4.5)*3,H/2,-D/2+4.2),"Really black",STONE,true)
+        end
+        hp(m,"GBarH1",  Vector3.new(gateW,0.6,T*0.5),   cf(0,4,-D/2+4.2),  "Really black",nil,true)
+        hp(m,"GBarH2",  Vector3.new(gateW,0.6,T*0.5),   cf(0,8,-D/2+4.2),  "Really black",nil,true)
+        -- Giant vault door at back
+        hp(m,"VaultDoor",Vector3.new(16,12,T),           cf(0,7,D/2-1.5),   "Dark grey",Enum.Material.Metal,true)
+        hp(m,"VaultRing",Vector3.new(12,12,0.5),         cf(0,7,D/2-1.2),   "Medium stone grey",nil,false)
+        hp(m,"VaultSpoke1",Vector3.new(10,0.8,0.4),      cf(0,7,D/2-1),     "Dark grey",nil,false)
+        hp(m,"VaultSpoke2",Vector3.new(0.8,10,0.4),      cf(0,7,D/2-1),     "Dark grey",nil,false)
+        hp(m,"VaultHandle",Vector3.new(1,5,1),           cf(5,7,D/2-0.8),   "Gold",NEON,false)
+        -- Golden chandelier
+        hp(m,"GChan",   Vector3.new(12,0.6,12),          cf(0,H-1.5,0),     "Bright yellow",NEON,false)
+        torchCol = "Bright yellow"
 
     elseif fd.id == "escape_pod_bay" then
-        -- Castle Battlements (top of the tower — open-air feel)
-        -- Trebuchet / catapult
-        hp(m,"TrebBase", Vector3.new(5,1,5),             cf(-4,1.5,0),         "Dark stone grey",STONE,true)
-        hp(m,"TrebArm",  Vector3.new(0.6,9,0.6),         cf(-4,6.5,-1),        "Reddish brown",nil,true)
-        hp(m,"TrebSling",Vector3.new(2,0.4,2),           cf(-4,11,2),          "Dark grey",nil,true)
-        hp(m,"TrebWheel",Vector3.new(3,3,0.5),           cf(-4,3,-1),          "Dark stone grey",STONE,true)
-        hp(m,"TrebBase2",Vector3.new(0.6,1.5,0.6),      cf(-2.5,2,1),         "Reddish brown",nil,true)
-        -- Launch platform / signal fire
-        hp(m,"FireBowl", Vector3.new(3,1,3),             cf(5,1.5,0),          "Dark stone grey",STONE,true)
-        hp(m,"Fire",     Vector3.new(2,3,2),             cf(5,3.5,0),          "Bright orange",NEON,false)
-        hp(m,"Smoke",    Vector3.new(1.5,2,1.5),         cf(5,5.5,0),          "Really black",nil,false)
-        -- Sky window (glass ceiling for open tower feel)
-        hp(m,"SkyGlass", Vector3.new(W-2,0.3,D-2),      cf(0,H-0.5,0),        "Cyan",NEON,false)
-        -- Arrow slits in walls
-        for _,ax in ipairs({-W/2+0.7, W/2-0.7}) do
-            hp(m,"Slit1"..ax,Vector3.new(T,4,1.5),      cf(ax,6,3),           "Really black",nil,false)
-            hp(m,"Slit2"..ax,Vector3.new(T,4,1.5),      cf(ax,6,-3),          "Really black",nil,false)
+        -- ═══ THE PARAPETS (Open-air castle top) ═══
+        -- Exposed battlements, trebuchet, signal fires, crow's nest, flagpoles.
+        -- Stone walkway floor
+        hp(m,"WalkFloor",Vector3.new(W-2,0.2,D-2),cf(0,0.9,0),"Medium stone grey",STONE,true)
+        -- Central crow's nest tower
+        hp(m,"CrowsNest",   Vector3.new(8,8,8),    cf(0,5,0),           "Dark stone grey",STONE,true)
+        hp(m,"CrowsTop",    Vector3.new(10,1,10),   cf(0,9.5,0),         "Dark stone grey",STONE,true)
+        hp(m,"CrowsFlag",   Vector3.new(0.6,10,0.6),cf(0,15,0),         "Dark grey",STONE,true)
+        hp(m,"CrowsFlagBan",Vector3.new(6,3,0.3),   cf(3,17.5,0),        "Bright red",nil,false)
+        -- Trebuchet (left side)
+        hp(m,"TBase",  Vector3.new(8,1.5,6),        cf(-40,1.75,-20),    "Dark stone grey",STONE,true)
+        hp(m,"TPost1", Vector3.new(0.8,8,0.8),      cf(-43,6,-20),       "Reddish brown",nil,true)
+        hp(m,"TPost2", Vector3.new(0.8,8,0.8),      cf(-37,6,-20),       "Reddish brown",nil,true)
+        hp(m,"TArm",   Vector3.new(0.8,14,0.8),     cf(-40,10,-19),      "Reddish brown",nil,true)
+        hp(m,"TCounter",Vector3.new(4,4,4),         cf(-40,13.5,-17),    "Dark stone grey",STONE,true)
+        hp(m,"TSling", Vector3.new(3,0.4,3),        cf(-40,4.5,-22),     "Dark grey",nil,true)
+        hp(m,"TWheel", Vector3.new(5,5,0.6),        cf(-40,5,-20),       "Dark stone grey",STONE,true)
+        -- Signal fire pyre (right side)
+        hp(m,"FireBase1",Vector3.new(5,1,5),        cf(40,1.5,20),       "Dark stone grey",STONE,true)
+        hp(m,"FireLog1", Vector3.new(4,0.8,1),      cf(40,2.4,21),       "Reddish brown",nil,true)
+        hp(m,"FireLog2", Vector3.new(1,0.8,4),      cf(41,2.4,20),       "Reddish brown",nil,true)
+        hp(m,"FireFlame1",Vector3.new(3,5,3),       cf(40,5,20),         "Bright orange",NEON,false)
+        hp(m,"FireFlame2",Vector3.new(2,3,2),       cf(40,7.5,20),       "Bright yellow",NEON,false)
+        -- Second signal fire (left)
+        hp(m,"FireBase2",Vector3.new(5,1,5),        cf(-40,1.5,20),      "Dark stone grey",STONE,true)
+        hp(m,"Fire2",    Vector3.new(3,5,3),        cf(-40,5,20),        "Bright orange",NEON,false)
+        -- Flag poles across the parapets
+        for _,fpx in ipairs({-50,-25,25,50}) do
+            hp(m,"FlagPole"..fpx,Vector3.new(0.6,12,0.6),cf(fpx,7,-D/2+1),"Dark grey",STONE,true)
+            hp(m,"Flag"..fpx,    Vector3.new(5,3,0.3),   cf(fpx+2.5,11,-D/2+1),"Bright red",nil,false)
         end
-        -- Flag pole at top
-        hp(m,"FlagPole", Vector3.new(0.5,8,0.5),        cf(W/2-2,H+4,D/2-2), "Dark grey",STONE,true)
-        hp(m,"Flag",     Vector3.new(4,2.5,0.2),        cf(W/2-2+2,H+7.5,D/2-2),"Bright red",nil,false)
+        -- Arrow loops in side walls
+        for _,ax2 in ipairs({-45,-25,-5,15,35,55}) do
+            hp(m,"ArrL"..ax2,Vector3.new(T,5,2),cf(-W/2,6,ax2-D/2),"Really black",nil,false)
+            hp(m,"ArrR"..ax2,Vector3.new(T,5,2),cf( W/2,6,ax2-D/2),"Really black",nil,false)
+        end
+        -- Sky light from open top
+        hp(m,"SkyGlow",Vector3.new(W-4,0.3,D-4),cf(0,H-0.5,0),"Cyan",NEON,false)
+        torchCol = "Cyan"
     end
 
-    -- Drop pad: in stairwell at ground, one per floor at different X
+    -- Re-apply torch color for whichever theme was selected
+    for _,sx2 in ipairs({-50,-32,-14,0,14,32,50}) do
+        local tf1 = m:FindFirstChild("TF"..sx2); if tf1 then tf1.BrickColor=BrickColor.new(torchCol) end
+        local tf2 = m:FindFirstChild("TF2"..sx2); if tf2 then tf2.BrickColor=BrickColor.new(torchCol) end
+    end
+
+    -- ── Drop pad + staircase ──────────────────────────────────────────────
     local pad = Instance.new("Part"); pad.Name="DropPad_"..fd.id
     pad.Size=Vector3.new(6,0.3,6)
-    pad.CFrame=plotCF*CFrame.new(stairX, 0.25, STAIR_Z)
+    pad.CFrame=plotCF*CFrame.new(stairX,0.25,STAIR_Z)
     pad.Anchored=true; pad.BrickColor=BrickColor.new("Bright green"); pad.Material=NEON
     pad.Parent=plot
 
-    -- Castle stone staircase from ground up to this floor
+    -- Staircase: goes from Y=0 up through the stairwell, enters floor through back wall gap
     local sm = Instance.new("Model"); sm.Name="Stair_"..fd.id; sm.Parent=plot
-    local steps = math.ceil(H/1.6)
-    for s=1,steps do
+    local totalSteps = math.ceil((yBase+H*0.7)/1.6)
+    for s=1,totalSteps do
         hp(sm,"S"..s, Vector3.new(4,0.5,1.8),
-            plotCF*CFrame.new(stairX, yBase+s*1.6-0.8, STAIR_Z-1+s*1.1),
-            "Dark stone grey", STONE, true)
+            plotCF*CFrame.new(stairX, s*1.6-0.8, STAIR_Z+s*0.8),
+            "Dark stone grey",STONE,true)
     end
-    -- Landing connects staircase top to the floor room interior
-    hp(sm,"Land",Vector3.new(6,0.5,8),
-        plotCF*CFrame.new(stairX, yBase+H-0.25, STAIR_Z+2),
+    -- Landing platform inside the floor room
+    hp(sm,"Land",Vector3.new(8,0.5,6),
+        plotCF*CFrame.new(stairX,yBase+T/2+0.2,D/2-4+FLR_LZ),
         "Dark stone grey",STONE,true)
 end
 
--- Alias so the plot builder loop still works
 local UPPER = CASTLE_FLOORS
 
 -- ── Plots ──────────────────────────────────────────────────────────────────
