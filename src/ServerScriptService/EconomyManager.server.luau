@@ -84,6 +84,11 @@ Remotes.BuyRoom.OnServerEvent:Connect(function(player: Player, roomId: string)
     data.rooms[roomId]  = 1
     pushCurrencyUpdate(player)
     Remotes.RoomBuilt:FireClient(player, roomId, 1)
+    -- Notify MinionManager when barracks is first built
+    if roomId == "minion_barracks" then
+        local mm = _G.MinionManager
+        if mm then mm.onBarracksBuilt(player, 1) end
+    end
 end)
 
 -- Upgrade a room (room upgrade menu activated)
@@ -104,6 +109,11 @@ Remotes.UpgradeRoom.OnServerEvent:Connect(function(player: Player, roomId: strin
     data.rooms[roomId] = nextTier
     pushCurrencyUpdate(player)
     Remotes.RoomBuilt:FireClient(player, roomId, nextTier)
+    -- Notify MinionManager when barracks is upgraded
+    if roomId == "minion_barracks" then
+        local mm = _G.MinionManager
+        if mm then mm.onBarracksBuilt(player, nextTier) end
+    end
 end)
 
 -- GetPlayerData remote function
