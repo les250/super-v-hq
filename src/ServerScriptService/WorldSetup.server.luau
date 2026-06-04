@@ -801,11 +801,13 @@ local function buildPlots()
         Instance.new("BoolValue",plot).Name="IsOccupied"; plot.IsOccupied.Value=false
         Instance.new("IntValue",plot).Name="OwnerId";     plot.OwnerId.Value=0
 
-        -- Spawn just in front of lab entrance
+        -- Spawn just in front of lab entrance — flat CFrame (no rotation), raised above floor
+        local spawnPos = (plotCF * CFrame.new(0, 0, 14)).Position  -- 14 studs toward centre
         local sp=Instance.new("SpawnLocation"); sp.Name="PlotSpawn"
-        sp.Size=Vector3.new(6,1,6); sp.CFrame=plotCF*CFrame.new(0,0.5,12)
+        sp.Size=Vector3.new(8,1,8)
+        sp.CFrame=CFrame.new(spawnPos.X, 1.5, spawnPos.Z)  -- flat, Y=1.5 above VillainFloor
         sp.Anchored=true; sp.Neutral=false; sp.AllowTeamChangeOnTouch=false
-        sp.Transparency=0.7; sp.BrickColor=BrickColor.new("Bright red"); sp.Material=Enum.Material.Neon
+        sp.Transparency=0.6; sp.BrickColor=BrickColor.new("Bright red"); sp.Material=Enum.Material.Neon
         sp.Parent=plot
 
         -- Anchors
@@ -826,7 +828,7 @@ end
 local function buildSpawn()
     local old=workspace:FindFirstChild("VillainSpawn"); if old then old:Destroy() end
     local sp=Instance.new("SpawnLocation"); sp.Name="VillainSpawn"
-    sp.Size=Vector3.new(10,1,10); sp.CFrame=CFrame.new(0,0.5,0)
+    sp.Size=Vector3.new(10,1,10); sp.CFrame=CFrame.new(0,1.5,0)  -- Y=1.5, safely above floor
     sp.Anchored=true; sp.BrickColor=BrickColor.new("Bright red"); sp.Material=Enum.Material.Neon
     sp.Parent=workspace
 

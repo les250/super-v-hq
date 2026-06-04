@@ -51,7 +51,7 @@ local function setPlotOccupied(plot: Folder, player: Player)
         if char then
             local hrp = char:FindFirstChild("HumanoidRootPart")
             if hrp then
-                hrp.CFrame = spawn.CFrame * CFrame.new(0, 3, 0)
+                hrp.CFrame = CFrame.new(spawn.Position.X, spawn.Position.Y + 4, spawn.Position.Z)
             end
         end
     end
