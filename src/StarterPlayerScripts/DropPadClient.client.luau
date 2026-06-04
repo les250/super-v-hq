@@ -12,6 +12,7 @@ local function titleCase(s: string): string
 end
 
 local player    = Players.LocalPlayer
+local isMobile  = game:GetService("UserInputService").TouchEnabled
 local character = player.Character or player.CharacterAdded:Wait()
 
 -- Wait for PlotManager to assign us a plot
@@ -39,7 +40,7 @@ local function setupDropPad(part: Part, roomId: string)
     prompt.ActionText    = "Build: " .. displayName
     prompt.ObjectText    = room and ("💰 " .. room.tiers[1].cost) or "Drop Pad"
     prompt.HoldDuration  = 0.5
-    prompt.MaxActivationDistance = 8
+    prompt.MaxActivationDistance = isMobile and 14 or 8
     prompt.Parent = part
 
     prompt.Triggered:Connect(function()
@@ -63,7 +64,7 @@ local function setupUpgradePad(roomModel: Model, roomId: string)
     prompt.ActionText   = "Upgrade " .. titleCase(roomId)
     prompt.ObjectText   = "Upgrade Pad"
     prompt.HoldDuration = 0.5
-    prompt.MaxActivationDistance = 8
+    prompt.MaxActivationDistance = isMobile and 14 or 8
     prompt.Parent = upgradePart
 
     prompt.Triggered:Connect(function()

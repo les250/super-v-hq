@@ -4,6 +4,7 @@ local TweenService   = game:GetService("TweenService")
 local Remotes        = require(game.ReplicatedStorage.Remotes)
 
 local player     = Players.LocalPlayer
+local isMobile   = game:GetService("UserInputService").TouchEnabled
 local playerGui  = player:WaitForChild("PlayerGui")
 
 -- Build ScreenGui
@@ -19,6 +20,10 @@ currencyFrame.Position          = UDim2.new(0, 16, 0, 16)
 currencyFrame.BackgroundColor3  = Color3.fromRGB(20, 20, 30)
 currencyFrame.BackgroundTransparency = 0.3
 currencyFrame.Parent            = gui
+
+if isMobile then
+    currencyFrame.Size = UDim2.new(0, 300, 0, 165)
+end
 
 local corner1 = Instance.new("UICorner")
 corner1.CornerRadius = UDim.new(0, 8)
