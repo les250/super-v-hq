@@ -51,7 +51,10 @@ local function setPlotOccupied(plot: Folder, player: Player)
         if char then
             local hrp = char:FindFirstChild("HumanoidRootPart")
             if hrp then
-                hrp.CFrame = CFrame.new(spawn.Position.X, spawn.Position.Y + 4, spawn.Position.Z)
+                -- Land character on top of the SpawnPad (top at Y=1) + 5 for character height
+                local spawnPad = plot:FindFirstChild("SpawnPad")
+                local landY = spawnPad and (spawnPad.Position.Y + spawnPad.Size.Y/2 + 5) or 6
+                hrp.CFrame = CFrame.new(spawn.Position.X, landY, spawn.Position.Z)
             end
         end
     end

@@ -435,23 +435,23 @@ local function buildLabFloor(plot, plotCF)
         ev("LabMBk"..k, Vector3.new(4,4,T+1), bx, H+2, -94)
     end
 
-    -- Castle portcullis gate at the entrance (iron bars over the front opening)
+    -- Castle portcullis gate (solid sides, decorative non-collidable bars)
     local pGateZ = -4
-    local entW   = 40   -- entrance opening width
+    local entW   = 40
     local sideW2 = (116-entW)/2
     ev("PGateL",   Vector3.new(sideW2,H,T+1),  -(entW/2+sideW2/2), H/2, pGateZ, "Dark stone grey")
     ev("PGateR",   Vector3.new(sideW2,H,T+1),   (entW/2+sideW2/2), H/2, pGateZ, "Dark stone grey")
     ev("PGateTop", Vector3.new(entW,4,T+1),    0, H-2, pGateZ, "Dark stone grey")
-    -- Iron bars in the gateway
+    -- Bars: VISUAL ONLY (CanCollide=false) — players must be able to walk through entrance
     for k=-4,4 do
-        ev("PGateBar"..k, Vector3.new(0.8,H-4,T+0.5), k*4.5, H/2-2, pGateZ, "Really black")
+        local bar=vp(cx_ext,"PGateBar"..k,Vector3.new(0.8,H-4,T+0.5),
+            plotCF*CFrame.new(k*4.5,H/2-2,pGateZ),"Really black")
+        bar.CanCollide=false   -- decorative only
     end
-    ev("PGateBarH", Vector3.new(entW,0.8,T+0.5), 0, 6, pGateZ, "Really black")
-    -- Neon accent along the gate arch
+    local barH=vp(cx_ext,"PGateBarH",Vector3.new(entW,0.8,T+0.5),
+        plotCF*CFrame.new(0,6,pGateZ),"Really black")
+    barH.CanCollide=false
     ev("PGateGlow", Vector3.new(entW+2,0.5,T+0.5), 0, H-4.5, pGateZ, "Bright violet", NEON)
-
-    -- Stone ground path leading from entrance to map centre
-    ev("EntPath", Vector3.new(20,0.3,20), 0, 0.2, 10, "Dark stone grey")
 end
 
 -- ── Castle tower upper floors ─────────────────────────────────────────────
@@ -801,13 +801,31 @@ local function buildPlots()
         Instance.new("BoolValue",plot).Name="IsOccupied"; plot.IsOccupied.Value=false
         Instance.new("IntValue",plot).Name="OwnerId";     plot.OwnerId.Value=0
 
-        -- Spawn just in front of lab entrance — flat CFrame (no rotation), raised above floor
-        local spawnPos = (plotCF * CFrame.new(0, 0, 14)).Position  -- 14 studs toward centre
+        -- Spawn platform: guaranteed solid ground 26 studs in front of lab entrance
+        -- Uses flat (unrotated) CFrame so character always spawns upright
+        local spawnWorld = (plotCF * CFrame.new(0, 0, 26)).Position  -- 26 studs toward centre
+
+        -- Solid platform under the spawn (independent of VillainFloor, always there)
+        local spawnPad = Instance.new("Part"); spawnPad.Name="SpawnPad"
+        spawnPad.Size=Vector3.new(16,2,16)
+        spawnPad.CFrame=CFrame.new(spawnWorld.X, 0, spawnWorld.Z)  -- top at Y=1
+        spawnPad.Anchored=true; spawnPad.CanCollide=true
+        spawnPad.BrickColor=BrickColor.new("Dark grey"); spawnPad.Material=Enum.Material.SmoothPlastic
+        spawnPad.Parent=plot
+        -- Neon border on platform
+        local spawnGlow = Instance.new("Part"); spawnGlow.Name="SpawnGlow"
+        spawnGlow.Size=Vector3.new(16.4,0.3,16.4)
+        spawnGlow.CFrame=CFrame.new(spawnWorld.X,1.15,spawnWorld.Z)
+        spawnGlow.Anchored=true; spawnGlow.CanCollide=false
+        spawnGlow.BrickColor=BrickColor.new("Bright red"); spawnGlow.Material=Enum.Material.Neon
+        spawnGlow.Parent=plot
+
+        -- SpawnLocation sits on top of the platform (top at Y=1, spawn at Y=1.5 centre → bottom at Y=1)
         local sp=Instance.new("SpawnLocation"); sp.Name="PlotSpawn"
-        sp.Size=Vector3.new(8,1,8)
-        sp.CFrame=CFrame.new(spawnPos.X, 1.5, spawnPos.Z)  -- flat, Y=1.5 above VillainFloor
+        sp.Size=Vector3.new(12,1,12)
+        sp.CFrame=CFrame.new(spawnWorld.X, 1.5, spawnWorld.Z)  -- flat+level, Y=1.5 centre
         sp.Anchored=true; sp.Neutral=false; sp.AllowTeamChangeOnTouch=false
-        sp.Transparency=0.6; sp.BrickColor=BrickColor.new("Bright red"); sp.Material=Enum.Material.Neon
+        sp.Transparency=1   -- invisible (platform below is the visual)
         sp.Parent=plot
 
         -- Anchors
@@ -828,8 +846,15 @@ end
 local function buildSpawn()
     local old=workspace:FindFirstChild("VillainSpawn"); if old then old:Destroy() end
     local sp=Instance.new("SpawnLocation"); sp.Name="VillainSpawn"
-    sp.Size=Vector3.new(10,1,10); sp.CFrame=CFrame.new(0,1.5,0)  -- Y=1.5, safely above floor
-    sp.Anchored=true; sp.BrickColor=BrickColor.new("Bright red"); sp.Material=Enum.Material.Neon
+    -- Solid central platform
+    local cp=Instance.new("Part"); cp.Name="CentralSpawnPad"
+    cp.Size=Vector3.new(20,2,20); cp.CFrame=CFrame.new(0,0,0)
+    cp.Anchored=true; cp.CanCollide=true
+    cp.BrickColor=BrickColor.new("Dark grey"); cp.Material=Enum.Material.SmoothPlastic
+    cp.Parent=workspace
+    -- SpawnLocation on top
+    sp.Size=Vector3.new(16,1,16); sp.CFrame=CFrame.new(0,1.5,0)
+    sp.Anchored=true; sp.Transparency=1
     sp.Parent=workspace
 
     -- Dual leaderboard board at map centre (facing +Z by default)
