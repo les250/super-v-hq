@@ -45,10 +45,17 @@ local function executeRaid(raider: Player, targetUserId: number)
     end
 
     local raiderData   = ds.get(raider)
+
+    -- Defense: room bonuses + Armor Chip / Minion Core items
     local defense      = RoomData.getDefenseReduction(targetData.rooms)
-    local ARMORY_BOOST = {0.05, 0.10, 0.15}  -- +5/10/15% per tier
+                       + RoomData.getInventoryDefenseBonus(targetData.inventory)
+
+    -- Boost: Armory tier + EMP Grenade item
+    local ARMORY_BOOST = {0.05, 0.10, 0.15}
     local raiderArmoryTier = (raiderData and raiderData.rooms and raiderData.rooms["armory"]) or 0
-    local boost = raiderArmoryTier > 0 and ARMORY_BOOST[raiderArmoryTier] or 0
+    local boost = (raiderArmoryTier > 0 and ARMORY_BOOST[raiderArmoryTier] or 0)
+                + RoomData.getInventoryRaidBonus(raiderData and raiderData.inventory)
+
     local stealPercent = math.max(0, Config.RAID_STEAL_PERCENT + boost - defense)
     local stolen       = math.floor(targetData.vaultAmount * stealPercent)
 

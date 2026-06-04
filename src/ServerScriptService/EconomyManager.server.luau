@@ -27,12 +27,19 @@ local function getItemIncomeBoost(data): number
     return boost
 end
 
+local function getEffectiveCap(data): number
+    -- Vault cap from progressive dept system + Vault room bonus + Vault Override item
+    return RoomData.getVaultCap(data.rooms, Config.BASE_VAULT_CAP)
+         + RoomData.getInventoryCapBonus(data.inventory)
+end
+
 local function pushCurrencyUpdate(player: Player)
     local ds   = getDS()
     local data = ds.get(player)
     if not data then return end
-    local cap       = RoomData.getVaultCap(data.rooms, Config.BASE_VAULT_CAP)
-    local incPerMin = math.floor(RoomData.getTotalIncome(data.rooms) * TICKS_PER_MIN)
+    local cap       = getEffectiveCap(data)
+    local baseInc   = RoomData.getTotalIncome(data.rooms)
+    local incPerMin = math.floor(baseInc * (1 + getItemIncomeBoost(data)) * TICKS_PER_MIN)
     Remotes.UpdateCurrency:FireClient(player, data.vaultAmount, cap, incPerMin)
 end
 
@@ -45,11 +52,8 @@ task.spawn(function()
             local data = ds.get(player)
             if data then
                 local baseIncome = RoomData.getTotalIncome(data.rooms)
-                local itemBoost  = getItemIncomeBoost(data)
-                local income     = math.floor(baseIncome * (1 + itemBoost))
-                local cap    = RoomData.getVaultCap(data.rooms, Config.BASE_VAULT_CAP)
-                -- Never reduce an above-cap balance (dev/promo overflow).
-                -- Only add income when below cap.
+                local income     = math.floor(baseIncome * (1 + getItemIncomeBoost(data)))
+                local cap        = getEffectiveCap(data)  -- includes Vault Override item
                 if data.vaultAmount < cap then
                     data.vaultAmount = math.min(data.vaultAmount + income, cap)
                 end

@@ -25,7 +25,8 @@ local function clearMinions(userId: number)
 end
 
 local function spawnMinions(player: Player, tier: number)
-    if tier < 1 or tier > 3 then return end
+    if tier < 1 then clearMinions(player.UserId); return end  -- tier=0 = just clear
+    if tier > 3 then return end
     local pm   = getPM()
     local plot = pm.getPlot(player)
     if not plot then return end

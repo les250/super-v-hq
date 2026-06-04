@@ -141,10 +141,13 @@ task.spawn(function()
         if not newPlot then return end
         local occ = newPlot:FindFirstChild("IsOccupied")
         if occ and occ.Value then return end
-        -- Reset room data, keep currency
+        -- Reset room data, keep currency and inventory
         local ds = getDS()
         local data = ds.get(player)
         if data then data.rooms = {} end
+        -- Clear minions from old base
+        local mm = _G.MinionManager
+        if mm then mm.onBarracksBuilt(player, 0) end
         -- Hide rooms on old plot for this client
         Remotes.ResetPlot:FireClient(player)
         freePlot(player)

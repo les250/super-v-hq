@@ -186,6 +186,48 @@ function RoomData.getLabProgress(builtRooms: {[string]: number}): (number, numbe
     return bought, 50
 end
 
+-- ── Item effect helpers (require ItemData inline to avoid circular deps) ───
+local _ItemData = nil
+local function getItemData()
+    if not _ItemData then _ItemData = require(script.Parent.ItemData) end
+    return _ItemData
+end
+
+-- Extra vault cap from held items (Vault Override)
+function RoomData.getInventoryCapBonus(inventory: {string}?): number
+    local bonus = 0
+    local ID = getItemData()
+    for _, id in ipairs(inventory or {}) do
+        local item = ID.get(id)
+        if item and item.capBoost then bonus += item.capBoost end
+    end
+    return bonus
+end
+
+-- Extra raid defense from held items (Armor Chip, Minion Core)
+function RoomData.getInventoryDefenseBonus(inventory: {string}?): number
+    local bonus = 0
+    local ID = getItemData()
+    for _, id in ipairs(inventory or {}) do
+        local item = ID.get(id)
+        if item then
+            bonus += (item.defenseBoostPct or 0) + (item.minionBoostPct or 0)
+        end
+    end
+    return bonus
+end
+
+-- Extra raid steal bonus from held items (EMP Grenade)
+function RoomData.getInventoryRaidBonus(inventory: {string}?): number
+    local bonus = 0
+    local ID = getItemData()
+    for _, id in ipairs(inventory or {}) do
+        local item = ID.get(id)
+        if item and item.raidBoostPct then bonus += item.raidBoostPct end
+    end
+    return bonus
+end
+
 RoomData.LAB_DEPTS = LAB_DEPTS
 
 return RoomData
