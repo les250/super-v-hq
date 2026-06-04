@@ -13,6 +13,9 @@ end
 
 local TICKS_PER_MIN = 60 / Config.INCOME_TICK_INTERVAL  -- 20 ticks/min at 3s
 
+-- Per-player debounce to rate-limit purchase events (prevents rapid-fire exploits)
+local buyDebounce: {[number]: number} = {}
+
 local function getItemIncomeBoost(data): number
     local boost = 0
     for _, itemId in ipairs(data.inventory or {}) do
@@ -62,6 +65,11 @@ Remotes.BuyRoom.OnServerEvent:Connect(function(player: Player, roomId: string)
     local data = ds.get(player)
     if not data then return end
 
+    -- Rate limit: ignore events faster than 0.5s
+    local now = os.clock()
+    if buyDebounce[player.UserId] and now - buyDebounce[player.UserId] < 0.5 then return end
+    buyDebounce[player.UserId] = now
+
     local room = RoomData.getRoom(roomId)
     if not room then return end
 
@@ -82,6 +90,7 @@ Remotes.BuyRoom.OnServerEvent:Connect(function(player: Player, roomId: string)
 
     data.vaultAmount   -= cost
     data.rooms[roomId]  = 1
+    data.vaultAmount = math.max(0, data.vaultAmount)  -- floor at 0, no negative balance
     pushCurrencyUpdate(player)
     Remotes.RoomBuilt:FireClient(player, roomId, 1)
     -- Notify MinionManager when barracks is first built
@@ -97,15 +106,23 @@ Remotes.UpgradeRoom.OnServerEvent:Connect(function(player: Player, roomId: strin
     local data = ds.get(player)
     if not data then return end
 
+    -- Rate limit
+    local now = os.clock()
+    if buyDebounce[player.UserId] and now - buyDebounce[player.UserId] < 0.5 then return end
+    buyDebounce[player.UserId] = now
+
     local room        = RoomData.getRoom(roomId)
     local currentTier = data.rooms[roomId] or 0
     if not room or currentTier == 0 or currentTier >= 3 then return end
 
     local nextTier = currentTier + 1
+    -- Validate tier is sequential (anti-exploit: prevent skipping tiers)
+    if nextTier > 3 then return end
     local cost     = room.tiers[nextTier].cost
     if data.vaultAmount < cost then return end
 
     data.vaultAmount  -= cost
+    data.vaultAmount = math.max(0, data.vaultAmount)
     data.rooms[roomId] = nextTier
     pushCurrencyUpdate(player)
     Remotes.RoomBuilt:FireClient(player, roomId, nextTier)

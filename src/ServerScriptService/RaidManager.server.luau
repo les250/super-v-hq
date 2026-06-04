@@ -89,6 +89,17 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 
     local productId = receiptInfo.ProductId
 
+    -- Allowlist: only process known product IDs
+    local validProducts = {
+        [Config.PRODUCT_CURRENCY_SMALL]  = true,
+        [Config.PRODUCT_CURRENCY_MEDIUM] = true,
+        [Config.PRODUCT_CURRENCY_LARGE]  = true,
+        [Config.PRODUCT_RAID]            = true,
+    }
+    if not validProducts[productId] then
+        return Enum.ProductPurchaseDecision.NotProcessedYet
+    end
+
     -- Currency purchases
     local currencyAmount = Config.PRODUCT_CURRENCY_AMOUNTS[productId]
     if currencyAmount then
