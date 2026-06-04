@@ -62,6 +62,8 @@ Remotes.TradeComplete  = get("RemoteEvent",    "TradeComplete")  -- server→cli
 Remotes.LeaderboardUpdate = get("RemoteEvent", "LeaderboardUpdate") -- (moneyTop: table, timeTop: table)
 
 -- Developer-only: instantly buy all 50 lab stations (requires dev code redeemed)
-Remotes.DevBuyAllLab = get("RemoteFunction", "DevBuyAllLab") -- () → {ok: bool, message: string, count: number}
+Remotes.DevBuyAllLab   = get("RemoteFunction", "DevBuyAllLab")   -- () → {ok, message, count}
+-- Developer-only: unlock EVERYTHING — all 55 items (50 lab + 5 castle floors)
+Remotes.DevUnlockAll   = get("RemoteFunction", "DevUnlockAll")   -- () → {ok, message, count}
 
 return Remotes

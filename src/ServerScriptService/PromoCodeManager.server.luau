@@ -111,3 +111,39 @@ Remotes.DevBuyAllLab.OnServerInvoke = function(player: Player)
 
     return {ok=true, message=string.format("Unlocked %d lab stations", count), count=count}
 end
+
+-- ── Dev: Unlock EVERYTHING — all 50 lab stations + all 5 castle floors ───────
+
+Remotes.DevUnlockAll.OnServerInvoke = function(player: Player)
+    local ds   = getDS()
+    local data = ds.get(player)
+    if not data then return {ok=false, message="Data not loaded"} end
+    if not data.usedCodes or not data.usedCodes[DEV_CODE_KEY] then
+        return {ok=false, message="Dev code required"}
+    end
+
+    local count = 0
+
+    -- Buy all rooms in unlockOrder sequence (prerequisites respected automatically
+    -- because we process them in order and set each one before checking the next)
+    local sorted = {}
+    for _, room in ipairs(RoomData.ROOMS) do table.insert(sorted, room) end
+    table.sort(sorted, function(a,b) return a.unlockOrder < b.unlockOrder end)
+
+    for _, room in ipairs(sorted) do
+        if not data.rooms[room.id] or data.rooms[room.id] == 0 then
+            data.rooms[room.id] = 1
+            Remotes.RoomBuilt:FireClient(player, room.id, 1)
+            count += 1
+        end
+    end
+
+    if count > 0 then
+        local incPerMin = math.floor(RoomData.getTotalIncome(data.rooms) * (60 / Config.INCOME_TICK_INTERVAL))
+        local cap = RoomData.getVaultCap(data.rooms, Config.BASE_VAULT_CAP)
+        Remotes.UpdateCurrency:FireClient(player, data.vaultAmount, cap, incPerMin)
+        ds.save(player)
+    end
+
+    return {ok=true, message=string.format("Unlocked everything! (%d items)", count), count=count}
+end

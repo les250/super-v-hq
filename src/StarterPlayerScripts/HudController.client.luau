@@ -253,16 +253,17 @@ end)
 
 -- ── Dev: Buy All Lab button (only shown after 04160416 redeemed) ───────────
 
+-- Single "Unlock Everything" dev button (lab + all castle floors)
 local devBuyBtn = Instance.new("TextButton")
 devBuyBtn.Size     = UDim2.new(1, -16, 0, 28)
-devBuyBtn.Position = UDim2.new(0, 8, 0, 108)   -- sits right below promo button inside panel
-devBuyBtn.BackgroundColor3 = Color3.fromRGB(0, 60, 0)
+devBuyBtn.Position = UDim2.new(0, 8, 0, 108)
+devBuyBtn.BackgroundColor3 = Color3.fromRGB(0, 50, 0)
 devBuyBtn.BackgroundTransparency = 0.15
-devBuyBtn.TextColor3 = Color3.fromRGB(100, 255, 120)
+devBuyBtn.TextColor3 = Color3.fromRGB(80, 255, 120)
 devBuyBtn.TextScaled = true; devBuyBtn.Font = Enum.Font.GothamBold
-devBuyBtn.Text = "🔬  Buy All Lab (DEV)"
-devBuyBtn.Visible = false          -- hidden until dev code redeemed
-devBuyBtn.Parent = promoPanel      -- lives inside the promo panel
+devBuyBtn.Text = "🔓  Unlock Everything (DEV)"
+devBuyBtn.Visible = false
+devBuyBtn.Parent = promoPanel
 Instance.new("UICorner", devBuyBtn).CornerRadius = UDim.new(0, 6)
 local dbs = Instance.new("UIStroke", devBuyBtn)
 dbs.Color = Color3.fromRGB(0, 200, 80); dbs.Thickness = 1.5
@@ -318,11 +319,11 @@ end
 promoSubmit.Activated:Connect(redeemWithDevCheck)
 
 devBuyBtn.Activated:Connect(function()
-    devBuyBtn.Active = false; devBuyBtn.Text = "🔬  Buying..."
-    local result = Remotes.DevBuyAllLab:InvokeServer()
-    devBuyBtn.Active = true; devBuyBtn.Text = "🔬  Buy All Lab (DEV)"
+    devBuyBtn.Active = false; devBuyBtn.Text = "🔓  Unlocking..."
+    local result = Remotes.DevUnlockAll:InvokeServer()
+    devBuyBtn.Active = true; devBuyBtn.Text = "🔓  Unlock Everything (DEV)"
     if result and result.ok then
-        showToast(string.format("✅ Unlocked %d lab stations!", result.count or 0))
+        showToast(string.format("✅ %s", result.message or "Done!"))
         promoPanel.Visible = false
     else
         showToast("❌ " .. (result and result.message or "Failed"))
