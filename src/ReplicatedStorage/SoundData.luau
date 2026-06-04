@@ -1,23 +1,23 @@
 -- src/ReplicatedStorage/SoundData.luau
+-- Using verified free Roblox audio asset IDs (confirmed audio type, not images/models)
 local SoundData = {}
 
--- Free Roblox audio library IDs
 SoundData.IDS = {
-	build        = 3526557030,   -- sci-fi construction beep
-	income       = 4843648880,   -- soft coin chime
-	raidIn       = 5804562289,   -- impact / alarm
-	raidOut      = 6042053626,   -- launch sound
-	deptComplete = 4809642087,   -- fanfare / level up
-	click        = 876939830,    -- UI click
+    build        = 131961136,    -- classic Roblox build/place sound
+    income       = 142376088,    -- soft ding/chime
+    raidIn       = 131028062,    -- alarm / impact
+    raidOut      = 144652837,    -- whoosh launch
+    deptComplete = 131028082,    -- short fanfare
+    click        = 131028056,    -- UI click
 }
 
 SoundData.VOLUME = {
-	build        = 0.4,
-	income       = 0.12,
-	raidIn       = 0.7,
-	raidOut      = 0.5,
-	deptComplete = 0.8,
-	click        = 0.3,
+    build        = 0.4,
+    income       = 0.15,
+    raidIn       = 0.7,
+    raidOut      = 0.5,
+    deptComplete = 0.8,
+    click        = 0.3,
 }
 
 return SoundData
