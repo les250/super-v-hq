@@ -452,6 +452,41 @@ local function buildLabFloor(plot, plotCF)
         plotCF*CFrame.new(0,6,pGateZ),"Really black")
     barH.CanCollide=false
     ev("PGateGlow", Vector3.new(entW+2,0.5,T+0.5), 0, H-4.5, pGateZ, "Bright violet", NEON)
+
+    -- ── Castle parapet ring at Y=14 (lab roof / tower base separator) ────────
+    local PAR_H = 4
+    local PAR_T = 2
+    local CREN_W = 4
+    local CREN_H = 3
+    local LAB_W_LOCAL = 116
+    local LAB_D_LOCAL = 94
+
+    local function par(name, sz, dx, dy, dz)
+        vp(bm, name, sz, plotCF*CFrame.new(dx, H+dy, dz), "Dark stone grey", STONE)
+    end
+
+    -- Four parapet walls
+    par("ParFr", Vector3.new(LAB_W_LOCAL, PAR_H, PAR_T),                0, PAR_H/2,  LAB_D_LOCAL/2-PAR_T/2)
+    par("ParBk", Vector3.new(LAB_W_LOCAL, PAR_H, PAR_T),                0, PAR_H/2, -LAB_D_LOCAL/2+PAR_T/2)
+    par("ParLf", Vector3.new(PAR_T, PAR_H, LAB_D_LOCAL-PAR_T*2), -LAB_W_LOCAL/2+PAR_T/2, PAR_H/2, 0)
+    par("ParRt", Vector3.new(PAR_T, PAR_H, LAB_D_LOCAL-PAR_T*2),  LAB_W_LOCAL/2-PAR_T/2, PAR_H/2, 0)
+
+    -- Crenellations on front/back (10 merlons each)
+    for k = 0, 9 do
+        local bx = (k - 4.5) * (LAB_W_LOCAL / 10)
+        par("CrFr"..k, Vector3.new(CREN_W, CREN_H, PAR_T+1), bx, PAR_H+CREN_H/2,  LAB_D_LOCAL/2-PAR_T/2)
+        par("CrBk"..k, Vector3.new(CREN_W, CREN_H, PAR_T+1), bx, PAR_H+CREN_H/2, -LAB_D_LOCAL/2+PAR_T/2)
+    end
+    -- Crenellations on left/right (8 merlons each)
+    for k = 0, 7 do
+        local bz = (k - 3.5) * (LAB_D_LOCAL / 8)
+        par("CrLf"..k, Vector3.new(PAR_T+1, CREN_H, CREN_W), -LAB_W_LOCAL/2+PAR_T/2, PAR_H+CREN_H/2, bz)
+        par("CrRt"..k, Vector3.new(PAR_T+1, CREN_H, CREN_W),  LAB_W_LOCAL/2-PAR_T/2, PAR_H+CREN_H/2, bz)
+    end
+    -- Neon accent strip on parapet top
+    local parGlow = vp(bm, "ParGlow", Vector3.new(LAB_W_LOCAL-2, 0.3, LAB_D_LOCAL-2),
+        plotCF*CFrame.new(0, H+PAR_H+0.15, 0), "Bright violet", NEON)
+    parGlow.CanCollide = false
 end
 
 -- ── Castle tower upper floors ─────────────────────────────────────────────
@@ -479,10 +514,13 @@ local CASTLE_FLOORS = {
 
 local function buildUpperFloor(plot, plotCF, fd)
     local fIdx   = fd.floor - 1
-    local yBase  = H * (fd.floor - 1)   -- 14, 28, 42, 56, 70
-    local W, D   = FLR_W, FLR_D         -- 116 × 94 — same as lab
-    local lx, lz = 0, FLR_LZ            -- centred above lab
-    local stairX = STAIR_X[fIdx]        -- staircase X per floor
+    local yBase  = H * (fd.floor - 1)       -- 14, 28, 42, 56, 70
+    local step   = fIdx * 6                  -- 6 studs narrower per floor level
+    local W      = FLR_W - step              -- 110, 104, 98, 92, 86
+    local D      = FLR_D - step              -- 88,  82,  76, 70, 64
+    local lx, lz = 0, FLR_LZ
+    -- Clamp stairX so it stays at least 8 studs from the (narrowing) side walls
+    local stairX = math.clamp(STAIR_X[fIdx], -(W/2 - 8), W/2 - 8)
 
     local function cf(dx,dy,dz) return plotCF*CFrame.new(lx+dx,yBase+dy,lz+dz) end
 
