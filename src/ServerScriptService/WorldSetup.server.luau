@@ -409,13 +409,12 @@ local function buildLabFloor(plot, plotCF)
         vp(cx_ext,name,sz,plotCF*CFrame.new(dx,dy,dz),col or "Dark stone grey",mat or STONE)
     end
 
-    -- 4 massive corner towers rising above the lab
+    -- 4 corner towers (capped at lab roof height to not overlap upper floors)
     for _,tx in ipairs({-57, 57}) do for _,tz in ipairs({-3, -90}) do
-        ev("CTwr"..tx..tz, Vector3.new(8,H+12,8), tx, H/2+6, tz)
-        ev("CTwrCap"..tx..tz, Vector3.new(10,2,10), tx, H+13, tz)
-        -- Tower arrow loops
-        ev("TArr1"..tx..tz, Vector3.new(T,3,1), tx, H+2, tz, "Really black")
-        ev("TArr2"..tx..tz, Vector3.new(1,T,3), tx, H+2, tz, "Really black")
+        ev("CTwr"..tx..tz,    Vector3.new(8,H,8),   tx, H/2, tz)
+        ev("CTwrCap"..tx..tz, Vector3.new(10,2,10), tx, H+1, tz)
+        -- Arrow loops on tower faces
+        ev("TArr1"..tx..tz, Vector3.new(T,3,1), tx, H-3, tz, "Really black")
     end end
 
     -- Battlements across the front face (entrance, facing map centre)
@@ -489,52 +488,41 @@ local function buildUpperFloor(plot, plotCF, fd)
 
     local m = Instance.new("Model"); m.Name="Room_"..fd.id; m.Parent=plot
 
-    -- ── Structure ─────────────────────────────────────────────────────────
-    -- Floor with a hole near the back where the staircase from the floor below emerges
-    -- Hole: 12 wide (centred on stairX), 16 deep, near back wall
-    local hW, hD = 12, 16
-    local hZoff  = D/2 - 12   -- offset from floor centre toward back wall
-    -- Front bulk of floor (everything excluding the last hD studs at back)
-    hp(m,"FlrMain",Vector3.new(W,T,D-hD), cf(0,T/2,-(hD/2)), fd.fc,STONE,true)
-    -- Back-left section (beside hole)
-    local bL = (W/2+stairX-hW/2)
-    local bR = (W/2-stairX-hW/2)
+    -- ── Coordinate system reminder ────────────────────────────────────────
+    -- In cf(dx,dy,dz): NEGATIVE dz = stairwell side (away from centre, Z≈-94)
+    --                  POSITIVE dz = entrance side   (toward centre,    Z≈0)
+    -- Stairwell wall: cf(...,-D/2) | Entrance wall: cf(...,+D/2)
+
+    -- ── Floor with staircase hole at the STAIRWELL edge ──────────────────
+    -- Hole: hW wide centred on stairX, hD deep starting from the stairwell wall
+    local hW, hD  = 14, 18
+    local hZcf    = -D/2 + hD/2   -- hole centre in cf() = -47+9 = -38 (stairwell side) ✓
+
+    -- Main bulk of floor: entrance side → stops hD before stairwell wall
+    -- Centre at cf(0, T/2, +hD/2) = shifted toward entrance by hD/2
+    hp(m,"FlrMain",Vector3.new(W,T,D-hD), cf(0,T/2,+hD/2), fd.fc,STONE,true)
+
+    -- Stairwell-edge floor: two pieces left/right of the hole
+    local bL = math.max(0, W/2 + stairX - hW/2 - 0.5)   -- left piece width
+    local bR = math.max(0, W/2 - stairX - hW/2 - 0.5)   -- right piece width
     if bL > 0.5 then
-        hp(m,"FlrBL",Vector3.new(bL,T,hD), cf(-W/2+bL/2,T/2,hZoff), fd.fc,STONE,true)
+        hp(m,"FlrBL",Vector3.new(bL,T,hD), cf(-W/2+bL/2,T/2,hZcf), fd.fc,STONE,true)
     end
     if bR > 0.5 then
-        hp(m,"FlrBR",Vector3.new(bR,T,hD), cf( W/2-bR/2,T/2,hZoff), fd.fc,STONE,true)
+        hp(m,"FlrBR",Vector3.new(bR,T,hD), cf( W/2-bR/2,T/2,hZcf), fd.fc,STONE,true)
     end
-    -- Low safety rail around hole so players see the gap
-    hp(m,"HoleRail",Vector3.new(hW,0.8,T), cf(stairX,0.8,hZoff-hD/2+T/2), fd.wc,STONE,false)
 
-    -- Front wall with wide entrance (30 wide, faces toward map centre)
-    local fw=(W-30)/2
-    hp(m,"FrL",  Vector3.new(fw,H,T),   cf(-(W/2-fw/2),H/2,-D/2+T/2), fd.wc,STONE,true)
-    hp(m,"FrR",  Vector3.new(fw,H,T),   cf( (W/2-fw/2),H/2,-D/2+T/2), fd.wc,STONE,true)
-    hp(m,"FrTop",Vector3.new(30,4,T),   cf(0,H-2,-D/2+T/2),            fd.wc,STONE,true)
-
-    -- Back wall with STAIRCASE DOOR GAPS (one per stairX, 8 wide)
-    -- Left and right sections around the 5 staircase openings
-    local gapW = 10
-    local prevX = -W/2
-    local stairPositions = {-44,-22,0,22,44}
-    table.sort(stairPositions)
-    for _, sx in ipairs(stairPositions) do
-        local segW = (sx - gapW/2) - prevX
-        if segW > 0.5 then
-            hp(m,"BkSeg"..sx, Vector3.new(segW,H,T), cf(prevX+segW/2,H/2,D/2-T/2), fd.wc,STONE,true)
-        end
-        prevX = sx + gapW/2
-    end
-    local lastSeg = W/2 - prevX
-    if lastSeg > 0.5 then
-        hp(m,"BkSegLast",Vector3.new(lastSeg,H,T), cf(prevX+lastSeg/2,H/2,D/2-T/2), fd.wc,STONE,true)
-    end
-    -- Top strip above staircase gaps
-    hp(m,"BkTop",Vector3.new(W,4,T), cf(0,H-2,D/2-T/2), fd.wc,STONE,true)
-
-    -- Side walls (solid)
+    -- ── Walls ─────────────────────────────────────────────────────────────
+    -- NO stairwell-side wall — open toward stairwell so players can look down and climb up
+    -- Entrance-side wall (toward map centre, dz=+D/2): solid with windows
+    local winS = (W-20)/2
+    hp(m,"EntrL",  Vector3.new(winS,H,T),   cf(-(W/2-winS/2),H/2,+D/2-T/2), fd.wc,STONE,true)
+    hp(m,"EntrR",  Vector3.new(winS,H,T),   cf( (W/2-winS/2),H/2,+D/2-T/2), fd.wc,STONE,true)
+    hp(m,"EntrBot",Vector3.new(20,WIN_BASE,T),cf(0,WIN_BASE/2,+D/2-T/2),     fd.wc,STONE,true)
+    local wg=vp(m,"EntrWin",Vector3.new(20,WIN_H,T),cf(0,WIN_BASE+WIN_H/2,+D/2-T/2),fd.wc,STONE)
+    wg.Transparency=0.45; wg.BrickColor=BrickColor.new(fd.wc)
+    hp(m,"EntrTop",Vector3.new(20,H-WIN_BASE-WIN_H,T),cf(0,(WIN_BASE+WIN_H+(H-WIN_BASE-WIN_H)/2),+D/2-T/2),fd.wc,STONE,true)
+    -- Side walls (solid, dz range)
     hp(m,"LW",  Vector3.new(T,H,D), cf(-W/2+T/2,H/2,0), fd.wc,STONE,true)
     hp(m,"RW",  Vector3.new(T,H,D), cf( W/2-T/2,H/2,0), fd.wc,STONE,true)
 
@@ -767,28 +755,32 @@ local function buildUpperFloor(plot, plotCF, fd)
     pad.Anchored=true; pad.BrickColor=BrickColor.new("Bright green"); pad.Material=NEON
     pad.Parent=plot
 
-    -- ── Staircase (ONE floor height only — from previous floor to this one) ──
-    -- Floor 2: from Y=0 (lab ground) to Y=14 (armory floor)
-    -- Floor 3: from Y=14 (armory) to Y=28 (barracks) — staircase INSIDE armory room
-    -- Floor 4+: same pattern, each staircase inside the floor below
-    local stairBottomY = yBase - H    -- Y level of the floor below (0 for floor 2)
-    local stepsPerFloor = math.ceil(H / 1.6)   -- ~9 steps per floor (14 studs ÷ 1.6)
+    -- ── Staircase ─────────────────────────────────────────────────────────
+    -- Each floor's staircase covers exactly ONE floor height (H=14 studs).
+    -- Floor 2: Y=0→14 at the stairwell edge (entering from below through the hole)
+    -- Floor 3: Y=14→28 INSIDE Floor 2, rising through Floor 3's hole
+    -- etc. Each staircase is hidden (hp) and revealed when that floor is purchased.
+    local stairBottomY = yBase - H   -- 0 for floor 2, 14 for floor 3, etc.
+    local stepsPerFloor = math.ceil(H / 1.4)  -- ~10 steps, gentler angle
 
-    -- Staircase Z: near the back of the floor, passing through the hole
-    -- hZoff is relative to the floor's lz, so absolute local Z = lz + hZoff
-    local stairAbsZ = FLR_LZ + (D/2 - 12)  -- near back wall in absolute local coords
+    -- Staircase sits in the hole area (stairwell side of the floor).
+    -- Absolute local Z of the hole: lz + hZcf
+    local holeGlobalZ = lz + hZcf   -- = -47 + (-38) = -85 (near stairwell at -94) ✓
 
     local sm = Instance.new("Model"); sm.Name="Stair_"..fd.id; sm.Parent=plot
     for s=1,stepsPerFloor do
-        local stepY = stairBottomY + s*1.6 - 0.8
-        local stepZ = stairAbsZ - (stepsPerFloor - s) * 1.0  -- steps angle forward as they rise
-        hp(sm,"S"..s, Vector3.new(5,0.5,1.8),
-            plotCF*CFrame.new(stairX, stepY, stepZ),
+        local t     = (s-1) / math.max(stepsPerFloor-1, 1)  -- 0→1
+        local stepY = stairBottomY + s*1.4 - 0.7
+        -- Steps go from stairwell wall (dz=-D/2=-47) to just inside hole (dz=hZcf+hD/2=-29)
+        -- That's 18 studs of horizontal travel over stepsPerFloor steps
+        local stepDz = -D/2 + t * (hZcf + D/2 + hD/2)  -- from -47 to -29 in dz
+        hp(sm,"S"..s, Vector3.new(6,0.4,1.8),
+            plotCF*CFrame.new(lx+stairX, stepY, lz+stepDz),
             "Dark stone grey",STONE,true)
     end
-    -- Top landing: sits flush with this floor surface, just inside the hole
-    hp(sm,"Land",Vector3.new(6,0.5,hD),
-        plotCF*CFrame.new(stairX, yBase+T/2+0.2, FLR_LZ+(D/2-12)),
+    -- Landing platform at the top of the staircase, flush with this floor
+    hp(sm,"Land",Vector3.new(8,0.4,hD+2),
+        plotCF*CFrame.new(lx+stairX, yBase+T/2+0.1, holeGlobalZ),
         "Dark stone grey",STONE,true)
 end
 
