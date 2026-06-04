@@ -398,8 +398,61 @@ local function buildLabFloor(plot, plotCF)
     swvp("SW_LWall",  Vector3.new(T,H,SWD),        -SWW/2+T/2,H/2,0,"Really black")
     swvp("SW_RWall",  Vector3.new(T,H,SWD),         SWW/2-T/2,H/2,0,"Really black")
     swvp("SW_Strip",  Vector3.new(SWW-2,0.3,SWD-2), 0,H-1.2,0,"Bright violet",Enum.Material.Neon,true)
-    -- Connection passage from Chemistry's back wall → stairwell (gap in Chemistry N-wall handled by room's solid-N wall; add a short link corridor)
-    buildCorridor(bm,plotCF, 0,-86, 12,10)   -- chemistry → stairwell link
+    -- Connection passage from Chemistry's back wall → stairwell
+    buildCorridor(bm,plotCF, 0,-86, 12,10)
+
+    -- ── Castle basement exterior ──────────────────────────────────────────
+    -- The lab is the castle's ground floor / basement.
+    -- Add stone corner towers, battlements on the roofline, and a portcullis gate.
+    local cx_ext = Instance.new("Model"); cx_ext.Name="Lab_CastleExterior"; cx_ext.Parent=plot
+    local function ev(name,sz,dx,dy,dz,col,mat)
+        vp(cx_ext,name,sz,plotCF*CFrame.new(dx,dy,dz),col or "Dark stone grey",mat or STONE)
+    end
+
+    -- 4 massive corner towers rising above the lab
+    for _,tx in ipairs({-57, 57}) do for _,tz in ipairs({-3, -90}) do
+        ev("CTwr"..tx..tz, Vector3.new(8,H+12,8), tx, H/2+6, tz)
+        ev("CTwrCap"..tx..tz, Vector3.new(10,2,10), tx, H+13, tz)
+        -- Tower arrow loops
+        ev("TArr1"..tx..tz, Vector3.new(T,3,1), tx, H+2, tz, "Really black")
+        ev("TArr2"..tx..tz, Vector3.new(1,T,3), tx, H+2, tz, "Really black")
+    end end
+
+    -- Battlements across the front face (entrance, facing map centre)
+    -- Lab front approx Z=-3 (just inside lobby area)
+    for k=0,11 do
+        local bx=(k-5.5)*(116/12)
+        ev("LabMFr"..k, Vector3.new(4,4,T+1), bx, H+2, -3)
+    end
+    -- Battlements on left and right exterior walls
+    for k=0,7 do
+        local bz=(k-3.5)*(94/8)
+        ev("LabMLf"..k, Vector3.new(T+1,4,5), -57, H+2, bz-46)
+        ev("LabMRt"..k, Vector3.new(T+1,4,5),  57, H+2, bz-46)
+    end
+    -- Battlements on the back wall (above stairwell)
+    for k=0,11 do
+        local bx=(k-5.5)*(116/12)
+        ev("LabMBk"..k, Vector3.new(4,4,T+1), bx, H+2, -94)
+    end
+
+    -- Castle portcullis gate at the entrance (iron bars over the front opening)
+    local pGateZ = -4
+    local entW   = 40   -- entrance opening width
+    local sideW2 = (116-entW)/2
+    ev("PGateL",   Vector3.new(sideW2,H,T+1),  -(entW/2+sideW2/2), H/2, pGateZ, "Dark stone grey")
+    ev("PGateR",   Vector3.new(sideW2,H,T+1),   (entW/2+sideW2/2), H/2, pGateZ, "Dark stone grey")
+    ev("PGateTop", Vector3.new(entW,4,T+1),    0, H-2, pGateZ, "Dark stone grey")
+    -- Iron bars in the gateway
+    for k=-4,4 do
+        ev("PGateBar"..k, Vector3.new(0.8,H-4,T+0.5), k*4.5, H/2-2, pGateZ, "Really black")
+    end
+    ev("PGateBarH", Vector3.new(entW,0.8,T+0.5), 0, 6, pGateZ, "Really black")
+    -- Neon accent along the gate arch
+    ev("PGateGlow", Vector3.new(entW+2,0.5,T+0.5), 0, H-4.5, pGateZ, "Bright violet", NEON)
+
+    -- Stone ground path leading from entrance to map centre
+    ev("EntPath", Vector3.new(20,0.3,20), 0, 0.2, 10, "Dark stone grey")
 end
 
 -- ── Castle tower upper floors ─────────────────────────────────────────────
@@ -437,7 +490,23 @@ local function buildUpperFloor(plot, plotCF, fd)
     local m = Instance.new("Model"); m.Name="Room_"..fd.id; m.Parent=plot
 
     -- ── Structure ─────────────────────────────────────────────────────────
-    hp(m,"Floor", Vector3.new(W,T,D),   cf(0,T/2,0),           fd.fc, STONE, true)
+    -- Floor with a hole near the back where the staircase from the floor below emerges
+    -- Hole: 12 wide (centred on stairX), 16 deep, near back wall
+    local hW, hD = 12, 16
+    local hZoff  = D/2 - 12   -- offset from floor centre toward back wall
+    -- Front bulk of floor (everything excluding the last hD studs at back)
+    hp(m,"FlrMain",Vector3.new(W,T,D-hD), cf(0,T/2,-(hD/2)), fd.fc,STONE,true)
+    -- Back-left section (beside hole)
+    local bL = (W/2+stairX-hW/2)
+    local bR = (W/2-stairX-hW/2)
+    if bL > 0.5 then
+        hp(m,"FlrBL",Vector3.new(bL,T,hD), cf(-W/2+bL/2,T/2,hZoff), fd.fc,STONE,true)
+    end
+    if bR > 0.5 then
+        hp(m,"FlrBR",Vector3.new(bR,T,hD), cf( W/2-bR/2,T/2,hZoff), fd.fc,STONE,true)
+    end
+    -- Low safety rail around hole so players see the gap
+    hp(m,"HoleRail",Vector3.new(hW,0.8,T), cf(stairX,0.8,hZoff-hD/2+T/2), fd.wc,STONE,false)
 
     -- Front wall with wide entrance (30 wide, faces toward map centre)
     local fw=(W-30)/2
@@ -691,24 +760,35 @@ local function buildUpperFloor(plot, plotCF, fd)
         local tf2 = m:FindFirstChild("TF2"..sx2); if tf2 then tf2.BrickColor=BrickColor.new(torchCol) end
     end
 
-    -- ── Drop pad + staircase ──────────────────────────────────────────────
+    -- ── Drop pad (purchase trigger at ground level in stairwell) ─────────
     local pad = Instance.new("Part"); pad.Name="DropPad_"..fd.id
     pad.Size=Vector3.new(6,0.3,6)
     pad.CFrame=plotCF*CFrame.new(stairX,0.25,STAIR_Z)
     pad.Anchored=true; pad.BrickColor=BrickColor.new("Bright green"); pad.Material=NEON
     pad.Parent=plot
 
-    -- Staircase: goes from Y=0 up through the stairwell, enters floor through back wall gap
+    -- ── Staircase (ONE floor height only — from previous floor to this one) ──
+    -- Floor 2: from Y=0 (lab ground) to Y=14 (armory floor)
+    -- Floor 3: from Y=14 (armory) to Y=28 (barracks) — staircase INSIDE armory room
+    -- Floor 4+: same pattern, each staircase inside the floor below
+    local stairBottomY = yBase - H    -- Y level of the floor below (0 for floor 2)
+    local stepsPerFloor = math.ceil(H / 1.6)   -- ~9 steps per floor (14 studs ÷ 1.6)
+
+    -- Staircase Z: near the back of the floor, passing through the hole
+    -- hZoff is relative to the floor's lz, so absolute local Z = lz + hZoff
+    local stairAbsZ = FLR_LZ + (D/2 - 12)  -- near back wall in absolute local coords
+
     local sm = Instance.new("Model"); sm.Name="Stair_"..fd.id; sm.Parent=plot
-    local totalSteps = math.ceil((yBase+H*0.7)/1.6)
-    for s=1,totalSteps do
-        hp(sm,"S"..s, Vector3.new(4,0.5,1.8),
-            plotCF*CFrame.new(stairX, s*1.6-0.8, STAIR_Z+s*0.8),
+    for s=1,stepsPerFloor do
+        local stepY = stairBottomY + s*1.6 - 0.8
+        local stepZ = stairAbsZ - (stepsPerFloor - s) * 1.0  -- steps angle forward as they rise
+        hp(sm,"S"..s, Vector3.new(5,0.5,1.8),
+            plotCF*CFrame.new(stairX, stepY, stepZ),
             "Dark stone grey",STONE,true)
     end
-    -- Landing platform inside the floor room
-    hp(sm,"Land",Vector3.new(8,0.5,6),
-        plotCF*CFrame.new(stairX,yBase+T/2+0.2,D/2-4+FLR_LZ),
+    -- Top landing: sits flush with this floor surface, just inside the hole
+    hp(sm,"Land",Vector3.new(6,0.5,hD),
+        plotCF*CFrame.new(stairX, yBase+T/2+0.2, FLR_LZ+(D/2-12)),
         "Dark stone grey",STONE,true)
 end
 
