@@ -361,21 +361,138 @@ local function buildLabFloor(plot, plotCF)
     buildRoom(plot,bm,plotCF, 1, 0,-68, 44,26, "S",
         makeStations(1, grid5x2(8,8)))
 
+    -- ── Chemistry: bobbing beakers + floating bubbles ─────────────────────
+    do
+        local function chemPart(name, sz, dx, dz, col, mat)
+            return vp(bm, name, sz, plotCF*CFrame.new(dx, 2, -68+dz), col, mat or STONE)
+        end
+        for i, bx in ipairs({-12, 0, 12}) do
+            local beaker = chemPart("ChemBeaker"..i, Vector3.new(2,5,2), bx, 0, "Bright green", Enum.Material.Glass)
+            beaker:SetAttribute("AnimType",  "bob")
+            beaker:SetAttribute("AnimSpeed",  2 + i * 0.5)
+            beaker:SetAttribute("AnimOffset", (i-1) * 0.8)
+            beaker:SetAttribute("AnimRange",  1.5)
+            local liq = chemPart("ChemLiq"..i, Vector3.new(1.4,3.5,1.4), bx, 0.2, "Bright green", NEON)
+            liq:SetAttribute("AnimType",  "bob")
+            liq:SetAttribute("AnimSpeed",  2 + i * 0.5)
+            liq:SetAttribute("AnimOffset", (i-1) * 0.8)
+            liq:SetAttribute("AnimRange",  1.5)
+        end
+        local bubOffsets = {{-8,-4},{-3,5},{4,-2},{9,3}}
+        for i, off in ipairs(bubOffsets) do
+            local bub = chemPart("ChemBub"..i, Vector3.new(0.6,0.6,0.6), off[1], off[2], "Bright green", NEON)
+            bub:SetAttribute("AnimType",  "float")
+            bub:SetAttribute("AnimSpeed",  2.5)
+            bub:SetAttribute("AnimOffset", (i-1) * 0.65)
+            bub:SetAttribute("AnimRange",  4)
+        end
+        local ceilPulse = vp(bm,"ChemCeilPulse",Vector3.new(40,0.3,22),
+            plotCF*CFrame.new(0, H-1.1, -68), "Bright green", NEON)
+        ceilPulse:SetAttribute("AnimType",  "pulse")
+        ceilPulse:SetAttribute("AnimSpeed",  2)
+        ceilPulse:SetAttribute("AnimRange",  0.7)
+    end
+
     -- 3. Biology Lab — right wing (door faces W = toward lobby)
     buildRoom(plot,bm,plotCF, 2, 60,-22, 26,44, "W",
         makeStations(2, grid2x5(8,8)))
+
+    -- ── Biology: counter-rotating DNA columns + pulsing culture tank ──────
+    do
+        local function bioPart(name, sz, dx, dy, dz, col, mat)
+            return vp(bm, name, sz, plotCF*CFrame.new(60+dx, dy, -22+dz), col, mat or STONE)
+        end
+        local col1 = bioPart("BioCol1", Vector3.new(1.5,12,1.5), -2, 7, 0, "Cyan", Enum.Material.Glass)
+        col1:SetAttribute("AnimType", "spin"); col1:SetAttribute("AnimSpeed", 4)
+        local col2 = bioPart("BioCol2", Vector3.new(1.5,12,1.5),  2, 7, 0, "Cyan", Enum.Material.Glass)
+        col2:SetAttribute("AnimType", "spin"); col2:SetAttribute("AnimSpeed", -4)
+        for i = 0, 3 do
+            local rung = bioPart("BioRung"..i, Vector3.new(4,0.5,0.4), 0, 3+i*3, i*1.5-3, "Cyan", NEON)
+            rung:SetAttribute("AnimType",  "pulse")
+            rung:SetAttribute("AnimSpeed",  1.5)
+            rung:SetAttribute("AnimOffset", i * 0.4)
+            rung:SetAttribute("AnimRange",  0.6)
+        end
+        local tank = bioPart("BioTank", Vector3.new(5,6,5), 0, 4, 8, "Cyan", NEON)
+        tank.Transparency = 0.6
+        tank:SetAttribute("AnimType",  "pulse")
+        tank:SetAttribute("AnimSpeed",  2)
+        tank:SetAttribute("AnimRange",  0.85)
+    end
 
     -- 4. Physics Lab — left wing (door faces E = toward lobby)
     buildRoom(plot,bm,plotCF, 3,-60,-22, 26,44, "E",
         makeStations(3, grid2x5(8,8)))
 
+    -- ── Physics: 3-axis spinning rings + pulsing energy core ─────────────
+    do
+        local function physPart(name, sz, dx, dy, dz, col, mat)
+            return vp(bm, name, sz, plotCF*CFrame.new(-60+dx, dy, -22+dz), col, mat or STONE)
+        end
+        local core = physPart("PhysCore", Vector3.new(4,4,4), 0, 7, 0, "Bright violet", NEON)
+        core:SetAttribute("AnimType","pulse"); core:SetAttribute("AnimSpeed",1.0); core:SetAttribute("AnimRange",0.5)
+        local ring1 = physPart("PhysRing1", Vector3.new(10,0.5,10), 0, 7, 0, "Bright violet", STONE)
+        ring1:SetAttribute("AnimType","spin"); ring1:SetAttribute("AnimSpeed",1.5)
+        local ring2 = physPart("PhysRing2", Vector3.new(0.5,8,8), 0, 7, 0, "Bright violet", STONE)
+        ring2.CFrame = ring2.CFrame * CFrame.Angles(0, 0, math.rad(45))
+        ring2:SetAttribute("AnimType","spin"); ring2:SetAttribute("AnimSpeed",2.5)
+        local ring3 = physPart("PhysRing3", Vector3.new(8,0.5,0.5), 0, 7, 0, "Bright violet", STONE)
+        ring3.CFrame = ring3.CFrame * CFrame.Angles(math.rad(45), 0, 0)
+        ring3:SetAttribute("AnimType","spin"); ring3:SetAttribute("AnimSpeed",3.5)
+        local beam1 = physPart("PhysBeam1", Vector3.new(0.3,12,0.3), -4, 7, 0, "Bright violet", NEON)
+        beam1:SetAttribute("AnimType","pulse"); beam1:SetAttribute("AnimSpeed",0.8); beam1:SetAttribute("AnimRange",1)
+        local beam2 = physPart("PhysBeam2", Vector3.new(0.3,12,0.3), 4, 7, 0, "Bright violet", NEON)
+        beam2:SetAttribute("AnimType","pulse"); beam2:SetAttribute("AnimSpeed",0.8); beam2:SetAttribute("AnimOffset",0.4); beam2:SetAttribute("AnimRange",1)
+    end
+
     -- 5. Electronics Lab — back-left (door faces E = toward spine)
     buildRoom(plot,bm,plotCF, 4,-52,-68, 32,26, "E",
         makeStations(4, grid5x2(6,7)))
 
+    -- ── Electronics: spinning fan + sequenced lights + data stream ────────
+    do
+        local function elecPart(name, sz, dx, dy, dz, col, mat)
+            return vp(bm, name, sz, plotCF*CFrame.new(-52+dx, dy, -68+dz), col, mat or STONE)
+        end
+        local fan = elecPart("ElecFan", Vector3.new(8,0.4,8), 0, 8, -2, "Dark grey", STONE)
+        fan:SetAttribute("AnimType","spin"); fan:SetAttribute("AnimSpeed",1.2)
+        local lightCols = {"Bright blue","Bright green","Bright blue","Bright red","Bright green"}
+        for i = 1, 5 do
+            local light = elecPart("ElecLight"..i, Vector3.new(0.4,0.4,0.4),
+                -8, 3 + i * 1.4, 4, lightCols[i], NEON)
+            light:SetAttribute("AnimType",   "strobe")
+            light:SetAttribute("AnimSpeed",  2.5)
+            light:SetAttribute("AnimOffset", (i-1) * 0.5)
+        end
+        local stream = elecPart("ElecStream", Vector3.new(28,0.5,0.3), 0, 5, -12, "Bright blue", NEON)
+        stream:SetAttribute("AnimType","pulse"); stream:SetAttribute("AnimSpeed",0.8); stream:SetAttribute("AnimRange",0.9)
+    end
+
     -- 6. Weapons R&D — back-right (door faces W = toward spine)
     buildRoom(plot,bm,plotCF, 5, 52,-68, 32,26, "W",
         makeStations(5, grid5x2(6,7)))
+
+    -- ── Weapons: spinning reticle + strobing warnings + shaking crate ────
+    do
+        local function weapPart(name, sz, dx, dy, dz, col, mat)
+            return vp(bm, name, sz, plotCF*CFrame.new(52+dx, dy, -68+dz), col, mat or STONE)
+        end
+        local reticle = weapPart("WeapReticle", Vector3.new(7,7,0.3), 4, 7, -6, "Bright red", STONE)
+        reticle:SetAttribute("AnimType","spin"); reticle:SetAttribute("AnimSpeed",2.0)
+        local cross1 = weapPart("WeapCross1", Vector3.new(6,0.4,0.4), 4, 7, -5.8, "Bright red", NEON)
+        cross1:SetAttribute("AnimType","spin"); cross1:SetAttribute("AnimSpeed",2.0)
+        local cross2 = weapPart("WeapCross2", Vector3.new(0.4,6,0.4), 4, 7, -5.8, "Bright red", NEON)
+        cross2:SetAttribute("AnimType","spin"); cross2:SetAttribute("AnimSpeed",2.0)
+        local warnPos = {{-8,4,5},{0,4,5},{8,4,5}}
+        for i, wp in ipairs(warnPos) do
+            local warn = weapPart("WeapWarn"..i, Vector3.new(0.8,0.8,0.8), wp[1], wp[2], wp[3], "Bright red", NEON)
+            warn:SetAttribute("AnimType",   "strobe")
+            warn:SetAttribute("AnimSpeed",  1.0)
+            warn:SetAttribute("AnimOffset", (i-1) * 0.33)
+        end
+        local crate = weapPart("WeapCrate", Vector3.new(4,3,4), -6, 2.5, 4, "Dark stone grey", STONE)
+        crate:SetAttribute("AnimType","bob"); crate:SetAttribute("AnimSpeed",0.3); crate:SetAttribute("AnimRange",0.25)
+    end
 
     -- 3. Corridors (enclosed passages between rooms)
     buildCorridor(bm,plotCF,   0,-44, 14,20)   -- N-S spine (lobby→chemistry)
