@@ -824,8 +824,8 @@ local function buildPlots()
         local sp=Instance.new("SpawnLocation"); sp.Name="PlotSpawn"
         sp.Size=Vector3.new(12,1,12)
         sp.CFrame=CFrame.new(spawnWorld.X, 1.5, spawnWorld.Z)  -- flat+level, Y=1.5 centre
-        sp.Anchored=true; sp.Neutral=false; sp.AllowTeamChangeOnTouch=false
-        sp.Transparency=1   -- invisible (platform below is the visual)
+        sp.Anchored=true; sp.Neutral=true   -- Neutral=true so it's a valid fallback spawn
+        sp.AllowTeamChangeOnTouch=false; sp.Transparency=1
         sp.Parent=plot
 
         -- Anchors

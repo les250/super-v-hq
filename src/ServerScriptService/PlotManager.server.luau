@@ -44,18 +44,15 @@ local function setPlotOccupied(plot: Folder, player: Player)
     if oid then oid.Value = player.UserId end
     playerPlots[player.UserId] = plot
     local spawn = plot:FindFirstChild("PlotSpawn")
-    if spawn then
-        player.RespawnLocation = spawn
-        -- Teleport character to spawn immediately (don't wait for death)
-        local char = player.Character
-        if char then
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                -- Land character on top of the SpawnPad (top at Y=1) + 5 for character height
-                local spawnPad = plot:FindFirstChild("SpawnPad")
-                local landY = spawnPad and (spawnPad.Position.Y + spawnPad.Size.Y/2 + 5) or 6
-                hrp.CFrame = CFrame.new(spawn.Position.X, landY, spawn.Position.Z)
-            end
+    if spawn then player.RespawnLocation = spawn end
+    -- Teleport character immediately to the SpawnPad
+    local char = player.Character
+    if char then
+        local hrp  = char:FindFirstChild("HumanoidRootPart")
+        local pad  = plot:FindFirstChild("SpawnPad")
+        if hrp and pad then
+            local topY = pad.Position.Y + pad.Size.Y / 2
+            hrp.CFrame = CFrame.new(pad.Position.X, topY + 5, pad.Position.Z)
         end
     end
 end
