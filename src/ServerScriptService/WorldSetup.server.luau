@@ -430,6 +430,25 @@ local function buildSpawn()
     sp.Size=Vector3.new(10,1,10); sp.CFrame=CFrame.new(0,0.5,0)
     sp.Anchored=true; sp.BrickColor=BrickColor.new("Bright red"); sp.Material=Enum.Material.Neon
     sp.Parent=workspace
+
+    -- Dual leaderboard board at map centre (facing +Z by default)
+    local board = Instance.new("Part"); board.Name="LeaderboardBoard"
+    board.Size=Vector3.new(14,7,0.5); board.Position=Vector3.new(0,4.5,-8)
+    board.Anchored=true; board.CanCollide=true
+    board.BrickColor=BrickColor.new("Really black")
+    board.Material=Enum.Material.SmoothPlastic; board.Parent=workspace
+
+    local boardGlow = Instance.new("Part"); boardGlow.Name="BoardGlow"
+    boardGlow.Size=Vector3.new(13.5,6.5,0.2); boardGlow.Position=Vector3.new(0,4.5,-7.7)
+    boardGlow.Anchored=true; boardGlow.CanCollide=false
+    boardGlow.BrickColor=BrickColor.new("Bright violet")
+    boardGlow.Material=Enum.Material.Neon; boardGlow.Parent=workspace
+
+    local boardFrame = Instance.new("Part"); boardFrame.Name="BoardFrame"
+    boardFrame.Size=Vector3.new(15,8,0.4); boardFrame.Position=Vector3.new(0,4.5,-8.3)
+    boardFrame.Anchored=true; boardFrame.CanCollide=false
+    boardFrame.BrickColor=BrickColor.new("Dark grey")
+    boardFrame.Material=Enum.Material.SmoothPlastic; boardFrame.Parent=workspace
 end
 
 -- ── Run ────────────────────────────────────────────────────────────────────

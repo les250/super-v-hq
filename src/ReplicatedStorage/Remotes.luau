@@ -59,4 +59,6 @@ Remotes.TradeResponse  = get("RemoteEvent",    "TradeResponse")  -- client→ser
 Remotes.TradeCancelled = get("RemoteEvent",    "TradeCancelled") -- server→client: (reason: string)
 Remotes.TradeComplete  = get("RemoteEvent",    "TradeComplete")  -- server→client: (itemId: string, otherName: string)
 
+Remotes.LeaderboardUpdate = get("RemoteEvent", "LeaderboardUpdate") -- (moneyTop: table, timeTop: table)
+
 return Remotes
