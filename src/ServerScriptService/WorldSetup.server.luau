@@ -166,6 +166,67 @@ local function buildRoom(plot, model, plotCF, deptIdx, lx, lz, W, D, doorDir, st
         windowWall(true,  D/2-T/2)
     end
 
+    -- Themed station model builder (called once per station)
+    local function buildStationModel(sm, deptIdx, sdx, sdz)
+        local acol = DEPT_ACCENT[deptIdx]
+        local dmat = DEPT_MAT[deptIdx]
+        local floorCol = DEPT_FLOOR_COL[deptIdx]
+
+        -- Base platform (all depts share this)
+        hp(sm,"Base", Vector3.new(4.5,0.4,4.5), cf(sdx,0.5,sdz), acol, dmat, true)
+
+        if deptIdx == 1 then
+            -- Chemistry: glowing beaker + bubbles
+            hp(sm,"Tank",  Vector3.new(1.5,4,1.5), cf(sdx,3,sdz),      acol, Enum.Material.Glass, true)
+            hp(sm,"Liquid",Vector3.new(1.2,3,1.2), cf(sdx,2.5,sdz),    acol, Enum.Material.Neon, false)
+            hp(sm,"Cap",   Vector3.new(1.8,0.4,1.8),cf(sdx,5.2,sdz),   acol, dmat, true)
+            hp(sm,"Tube1", Vector3.new(0.3,2,0.3), cf(sdx+0.8,4,sdz-0.5), acol, dmat, true)
+            hp(sm,"Tube2", Vector3.new(0.3,1.5,0.3),cf(sdx-0.7,3.5,sdz+0.5),floorCol,dmat,true)
+            hp(sm,"Glow",  Vector3.new(0.8,0.3,0.8),cf(sdx,5.6,sdz),   acol, Enum.Material.Neon, false)
+
+        elseif deptIdx == 2 then
+            -- Electronics: server rack with blinking lights
+            hp(sm,"Rack",  Vector3.new(3.5,5,2),   cf(sdx,3,sdz),      floorCol, Enum.Material.Metal, true)
+            hp(sm,"Panel1",Vector3.new(3,0.4,1.5),  cf(sdx,1.8,sdz+0.3),acol, Enum.Material.SmoothPlastic, true)
+            hp(sm,"Panel2",Vector3.new(3,0.4,1.5),  cf(sdx,3,sdz+0.3), acol, Enum.Material.SmoothPlastic, true)
+            hp(sm,"Panel3",Vector3.new(3,0.4,1.5),  cf(sdx,4.2,sdz+0.3),acol, Enum.Material.SmoothPlastic, true)
+            hp(sm,"Light1",Vector3.new(0.3,0.3,0.2),cf(sdx-1.2,1.8,sdz+0.35),acol,Enum.Material.Neon,false)
+            hp(sm,"Light2",Vector3.new(0.3,0.3,0.2),cf(sdx-0.6,3,sdz+0.35),  "Bright green",Enum.Material.Neon,false)
+            hp(sm,"Light3",Vector3.new(0.3,0.3,0.2),cf(sdx-1.2,4.2,sdz+0.35),acol,Enum.Material.Neon,false)
+            hp(sm,"Glow",  Vector3.new(3,0.2,0.2),  cf(sdx,5.5,sdz),   acol, Enum.Material.Neon, false)
+
+        elseif deptIdx == 3 then
+            -- Biology: microscope + culture dish
+            hp(sm,"Stand", Vector3.new(0.5,4,0.5),  cf(sdx,2.5,sdz-0.3),floorCol,Enum.Material.Metal,true)
+            hp(sm,"Arm",   Vector3.new(2,0.4,0.4),  cf(sdx,4.8,sdz-0.3),floorCol,Enum.Material.Metal,true)
+            hp(sm,"Lens",  Vector3.new(0.8,1.2,0.8),cf(sdx,3.5,sdz-0.3),acol,Enum.Material.Glass,true)
+            hp(sm,"Eye",   Vector3.new(0.6,0.8,0.6),cf(sdx,5.2,sdz-0.3),acol,Enum.Material.Neon,false)
+            hp(sm,"Dish",  Vector3.new(2.5,0.3,2.5),cf(sdx,0.95,sdz+0.5),acol,Enum.Material.Glass,true)
+            hp(sm,"Sample",Vector3.new(2,0.2,2),     cf(sdx,1.05,sdz+0.5),acol,Enum.Material.Neon,false)
+            hp(sm,"Glow",  Vector3.new(0.4,0.4,0.4),cf(sdx,5.8,sdz-0.3),acol,Enum.Material.Neon,false)
+
+        elseif deptIdx == 4 then
+            -- Physics: particle ring accelerator
+            hp(sm,"Core",  Vector3.new(1.5,1.5,1.5),cf(sdx,3,sdz),     acol, Enum.Material.Neon, false)
+            hp(sm,"Ring1", Vector3.new(4,0.3,4),     cf(sdx,3,sdz),     floorCol,Enum.Material.Metal,true)
+            hp(sm,"Ring2", Vector3.new(3.2,0.3,3.2), cf(sdx,3.8,sdz),   floorCol,Enum.Material.Metal,true)
+            hp(sm,"Ring3", Vector3.new(2.5,0.3,2.5), cf(sdx,4.5,sdz),   floorCol,Enum.Material.Metal,true)
+            hp(sm,"Beam1", Vector3.new(0.2,5,0.2),   cf(sdx+1.8,3,sdz), acol,Enum.Material.Neon,false)
+            hp(sm,"Beam2", Vector3.new(0.2,5,0.2),   cf(sdx-1.8,3,sdz), acol,Enum.Material.Neon,false)
+            hp(sm,"Glow",  Vector3.new(1,1,1),        cf(sdx,3,sdz),     acol, Enum.Material.Neon, false)
+
+        elseif deptIdx == 5 then
+            -- Weapons R&D: weapon crate + targeting reticle
+            hp(sm,"Crate1",Vector3.new(3,2,2),       cf(sdx,1.5,sdz),   floorCol,Enum.Material.DiamondPlate,true)
+            hp(sm,"Crate2",Vector3.new(2,1.5,1.5),   cf(sdx,3.25,sdz-0.5),floorCol,Enum.Material.DiamondPlate,true)
+            hp(sm,"Target",Vector3.new(2.5,2.5,0.2), cf(sdx+0.5,4,sdz+0.8),floorCol,Enum.Material.SmoothPlastic,true)
+            hp(sm,"Ring",  Vector3.new(2.5,2.5,0.1), cf(sdx+0.5,4,sdz+0.85),acol,Enum.Material.Neon,false)
+            hp(sm,"Cross1",Vector3.new(2.5,0.2,0.1), cf(sdx+0.5,4,sdz+0.9), acol,Enum.Material.Neon,false)
+            hp(sm,"Cross2",Vector3.new(0.2,2.5,0.1), cf(sdx+0.5,4,sdz+0.9), acol,Enum.Material.Neon,false)
+            hp(sm,"Glow",  Vector3.new(0.4,5,0.4),   cf(sdx+0.5,4,sdz+0.8), acol,Enum.Material.Neon,false)
+        end
+    end
+
     -- Station pads + hidden models
     for _, st in ipairs(stationList) do
         local sdx, sdz = st.dx, st.dz
@@ -175,11 +236,7 @@ local function buildRoom(plot, model, plotCF, deptIdx, lx, lz, W, D, doorDir, st
         pad.Parent=plot
 
         local sm=Instance.new("Model"); sm.Name="Room_"..st.id; sm.Parent=plot
-        hp(sm,"Base",  Vector3.new(4.5,0.5,4.5),cf(sdx,0.55,sdz),acol,dmat,true)
-        hp(sm,"Body",  Vector3.new(3,6,3),       cf(sdx,3.8,sdz), DEPT_FLOOR_COL[deptIdx],dmat,true)
-        hp(sm,"Panel", Vector3.new(2.5,3,0.3),   cf(sdx,4.8,sdz+1.6),acol,Enum.Material.SmoothPlastic,false)
-        hp(sm,"Glow",  Vector3.new(2,0.5,2),     cf(sdx,7.05,sdz),acol,Enum.Material.Neon,false)
-        hp(sm,"Stem",  Vector3.new(0.3,5.5,0.3), cf(sdx+1.8,3.8,sdz),acol,Enum.Material.Neon,false)
+        buildStationModel(sm, deptIdx, sdx, sdz)
     end
 end
 
@@ -364,6 +421,40 @@ local function buildUpperFloor(plot, plotCF, fd)
     hp(m,"LW",     Vector3.new(T,H,D),      cf(-W/2+T/2,H/2,0),  fd.wc,nil,true)
     hp(m,"RW",     Vector3.new(T,H,D),      cf( W/2-T/2,H/2,0),  fd.wc,nil,true)
     hp(m,"Strip",  Vector3.new(W-2,0.3,D-2),cf(0,H-1.2,0),       "Bright violet",Enum.Material.Neon,false)
+
+    -- Themed interior decorations (hidden until bought)
+    if fd.id == "armory" then
+        hp(m,"Rack1",   Vector3.new(0.5,8,6),      cf(-W/2+1,H/2,-2),  "Dark grey",Enum.Material.Metal,true)
+        hp(m,"Rack2",   Vector3.new(0.5,8,6),      cf(-W/2+1,H/2, 6),  "Dark grey",Enum.Material.Metal,true)
+        hp(m,"Crate1",  Vector3.new(4,3,4),         cf(4,2.5,2),        "Olive",Enum.Material.SmoothPlastic,true)
+        hp(m,"Crate2",  Vector3.new(3,3,3),         cf(4,5,4),          "Olive",Enum.Material.SmoothPlastic,true)
+        hp(m,"ArmLight",Vector3.new(W-2,0.3,D-2),  cf(0,H-1.5,0),      "Bright red",Enum.Material.Neon,false)
+    elseif fd.id == "minion_barracks" then
+        hp(m,"Bed1Bot", Vector3.new(5,0.4,2.5),    cf(-4,2,2),         "Reddish brown",nil,true)
+        hp(m,"Bed1Top", Vector3.new(5,0.4,2.5),    cf(-4,5,2),         "Reddish brown",nil,true)
+        hp(m,"Bed2Bot", Vector3.new(5,0.4,2.5),    cf(-4,2,-4),        "Reddish brown",nil,true)
+        hp(m,"Bed2Top", Vector3.new(5,0.4,2.5),    cf(-4,5,-4),        "Reddish brown",nil,true)
+        hp(m,"MBLight", Vector3.new(W-2,0.3,D-2),  cf(0,H-1.5,0),      "Bright orange",Enum.Material.Neon,false)
+    elseif fd.id == "war_room" then
+        hp(m,"Table",   Vector3.new(10,0.8,7),     cf(0,4,0),          "Dark grey",nil,true)
+        hp(m,"Screen",  Vector3.new(10,5,0.3),     cf(0,6.5,-D/2+2),   "Black",nil,false)
+        hp(m,"Display", Vector3.new(9,4,0.2),      cf(0,6.5,-D/2+2.1), "Bright red",Enum.Material.Neon,false)
+        hp(m,"WRLight", Vector3.new(W-2,0.3,D-2),  cf(0,H-1.5,0),      "Bright blue",Enum.Material.Neon,false)
+    elseif fd.id == "vault" then
+        for row=0,2 do for col=-2,2 do
+            hp(m,"Gold"..row..col,Vector3.new(1.5,0.8,2.5),cf(col*1.8,1.5+row*0.9,3+row*0.3),"Bright yellow",nil,true)
+        end end
+        hp(m,"VaultDoor",Vector3.new(8,8,1),       cf(0,5,-D/2+2),     "Dark grey",nil,true)
+        hp(m,"VaultRing",Vector3.new(6,6,0.3),     cf(0,5,-D/2+2.2),   "Medium stone grey",nil,false)
+        hp(m,"VLight",  Vector3.new(W-2,0.3,D-2),  cf(0,H-1.5,0),      "Bright yellow",Enum.Material.Neon,false)
+    elseif fd.id == "escape_pod_bay" then
+        hp(m,"Rocket",  Vector3.new(4,8,4),         cf(0,5,0),          "White",nil,true)
+        hp(m,"Nose",    Vector3.new(3,3,3),          cf(0,9.5,0),        "Light grey",nil,true)
+        hp(m,"Engine",  Vector3.new(2,1,2),          cf(0,1.5,0),        "Dark grey",nil,true)
+        hp(m,"Exhaust1",Vector3.new(1,1,1),          cf(1.5,0.5,1.5),   "Bright orange",Enum.Material.Neon,false)
+        hp(m,"Exhaust2",Vector3.new(1,1,1),          cf(-1.5,0.5,-1.5), "Bright orange",Enum.Material.Neon,false)
+        hp(m,"EPLight", Vector3.new(W-2,0.3,D-2),   cf(0,H-1.5,0),     "Cyan",Enum.Material.Neon,false)
+    end
 
     -- Drop pad INSIDE the stairwell hall at ground level (Y=0.25)
     -- (Gating is handled by EconomyManager prerequisite check, not physical placement)
