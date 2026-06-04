@@ -70,5 +70,44 @@ Remotes.RedeemCode.OnServerInvoke = function(player: Player, code: string)
         ok      = true,
         message = string.format("💰 +%s granted! (%s)", granted, codeData.description),
         amount  = granted,
+        isDevCode = codeData.bypassCap == true,
     }
+end
+
+-- ── Dev: Buy All Lab Stations (requires 04160416 redeemed) ────────────────
+
+local DEV_CODE_KEY = "04160416"
+
+Remotes.DevBuyAllLab.OnServerInvoke = function(player: Player)
+    local ds   = getDS()
+    local data = ds.get(player)
+    if not data then
+        return {ok=false, message="Data not loaded"}
+    end
+
+    -- Gate: only works if the dev code has been redeemed
+    if not data.usedCodes or not data.usedCodes[DEV_CODE_KEY] then
+        return {ok=false, message="Dev code required"}
+    end
+
+    local count = 0
+    for _, room in ipairs(RoomData.ROOMS) do
+        if room.unlockOrder == 1 then
+            -- Only buy stations not yet at tier 1+
+            if not data.rooms[room.id] or data.rooms[room.id] == 0 then
+                data.rooms[room.id] = 1
+                Remotes.RoomBuilt:FireClient(player, room.id, 1)
+                count += 1
+            end
+        end
+    end
+
+    if count > 0 then
+        local incPerMin = math.floor(RoomData.getTotalIncome(data.rooms) * (60 / Config.INCOME_TICK_INTERVAL))
+        local cap = RoomData.getVaultCap(data.rooms, Config.BASE_VAULT_CAP)
+        Remotes.UpdateCurrency:FireClient(player, data.vaultAmount, cap, incPerMin)
+        ds.save(player)
+    end
+
+    return {ok=true, message=string.format("Unlocked %d lab stations", count), count=count}
 end

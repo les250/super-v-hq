@@ -250,3 +250,81 @@ promoSubmit.Activated:Connect(redeem)
 promoInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then redeem() end
 end)
+
+-- ── Dev: Buy All Lab button (only shown after 04160416 redeemed) ───────────
+
+local devBuyBtn = Instance.new("TextButton")
+devBuyBtn.Size     = UDim2.new(1, -16, 0, 28)
+devBuyBtn.Position = UDim2.new(0, 8, 0, 108)   -- sits right below promo button inside panel
+devBuyBtn.BackgroundColor3 = Color3.fromRGB(0, 60, 0)
+devBuyBtn.BackgroundTransparency = 0.15
+devBuyBtn.TextColor3 = Color3.fromRGB(100, 255, 120)
+devBuyBtn.TextScaled = true; devBuyBtn.Font = Enum.Font.GothamBold
+devBuyBtn.Text = "🔬  Buy All Lab (DEV)"
+devBuyBtn.Visible = false          -- hidden until dev code redeemed
+devBuyBtn.Parent = promoPanel      -- lives inside the promo panel
+Instance.new("UICorner", devBuyBtn).CornerRadius = UDim.new(0, 6)
+local dbs = Instance.new("UIStroke", devBuyBtn)
+dbs.Color = Color3.fromRGB(0, 200, 80); dbs.Thickness = 1.5
+
+local function showDevButton()
+    devBuyBtn.Visible = true
+    -- Expand promoPanel height to fit the extra button
+    promoPanel.Size = UDim2.new(0, 260, 0, 144)
+end
+
+local function hideDevButton()
+    devBuyBtn.Visible = false
+    promoPanel.Size = UDim2.new(0, 260, 0, 100)
+end
+
+-- Check on load if dev code was already redeemed
+task.spawn(function()
+    local data = Remotes.GetPlayerData:InvokeServer()
+    if data and data.usedCodes and data.usedCodes["04160416"] then
+        showDevButton()
+    end
+end)
+
+-- Also show immediately when dev code is redeemed this session
+local _origRedeem = redeem
+redeem = function()
+    _origRedeem()
+end
+
+-- Hook: show after successful dev code redemption
+-- We detect via the result returned — if result.isDevCode then show
+local _origRedeem2 = redeem
+local function redeemWithDevCheck()
+    local code = promoInput.Text
+    if code == "" then return end
+    promoSubmit.Active = false; promoSubmit.Text = "..."
+    promoStatus.TextColor3 = Color3.fromRGB(200,200,200); promoStatus.Text = "Checking..."
+    local result = Remotes.RedeemCode:InvokeServer(code)
+    promoSubmit.Active = true; promoSubmit.Text = "Redeem"
+    if result and result.ok then
+        promoStatus.TextColor3 = Color3.fromRGB(100,255,120); promoStatus.Text = result.message
+        promoInput.Text = ""
+        showToast(result.message)
+        if result.isDevCode then showDevButton() end
+        task.delay(2, function() promoPanel.Visible = false end)
+    else
+        promoStatus.TextColor3 = Color3.fromRGB(255,100,100)
+        promoStatus.Text = result and result.message or "Error"
+    end
+end
+
+-- Replace the existing submit/enter handlers with the enhanced version
+promoSubmit.Activated:Connect(redeemWithDevCheck)
+
+devBuyBtn.Activated:Connect(function()
+    devBuyBtn.Active = false; devBuyBtn.Text = "🔬  Buying..."
+    local result = Remotes.DevBuyAllLab:InvokeServer()
+    devBuyBtn.Active = true; devBuyBtn.Text = "🔬  Buy All Lab (DEV)"
+    if result and result.ok then
+        showToast(string.format("✅ Unlocked %d lab stations!", result.count or 0))
+        promoPanel.Visible = false
+    else
+        showToast("❌ " .. (result and result.message or "Failed"))
+    end
+end)
